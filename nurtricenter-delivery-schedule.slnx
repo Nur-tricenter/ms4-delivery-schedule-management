@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="src\NurtricenterDeliverySchedule.Domain\NurtricenterDeliverySchedule.Domain.csproj" />
+  <Project Path="src\NurtricenterDeliverySchedule.Application\NurtricenterDeliverySchedule.Application.csproj" />
+  <Project Path="src\NurtricenterDeliverySchedule.Infrastructure\NurtricenterDeliverySchedule.Infrastructure.csproj" />
+  <Project Path="src\NurtricenterDeliverySchedule.Presentation\NurtricenterDeliverySchedule.Presentation.csproj" />
+</Solution>

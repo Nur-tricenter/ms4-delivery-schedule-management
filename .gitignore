@@ -1,0 +1,83 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## NuGet
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+!**/packages/repositories.config
+
+## Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+## Visual Studio
+.vs/
+*.csproj.user
+*.vbproj.user
+*.fsproj.user
+*.rsuser
+*.pidb
+*.polyml
+*.pdb
+*.pgc
+*.pgd
+*.rsp
+*.sbr
+*.tlb
+*.tli
+*.tlh
+*.tmp
+*.tmp_proj
+*_wpftmp.csproj
+*.log
+*.tlog
+*.vspscc
+*.vssscc
+.builds
+*.pidb
+*.svclog
+*.scc
+
+## Rider
+.idea/
+*.sln.iml
+
+## VS Code
+.vscode/
+
+## EF Core migrations (keep Migrations folder but ignore snapshots if desired)
+# Uncomment if you want to ignore migration snapshots:
+# **/Migrations/*Snapshot.cs
+
+## Secrets / sensitive config
+appsettings.*.local.json
+secrets.json
+*.pfx
+*.key
+
+## Claude Code plugins (local tooling, not project code)
+.agents/
+skills-lock.json
+install.ps1
+
+## OS
+.DS_Store
+Thumbs.db
+Desktop.ini

@@ -1,0 +1,6 @@
+@nurtricenter_delivery_schedule_HostAddress = http://localhost:5105
+
+GET {{nurtricenter_delivery_schedule_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
