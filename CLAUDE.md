@@ -143,3 +143,34 @@ Verificar contra criterios ya definidos:
 - Autenticación servicio-a-servicio.
 - Outbox pattern.
 - Versionado de schema de eventos (no aplica: esta etapa usa REST síncrono, no eventos).
+
+---
+
+## 5. Estado actual de la implementación (para agentes — leer antes de tocar código)
+
+Ver también [`README.md`](./README.md) (cómo correr/testear) y [`FLOWS.md`](./FLOWS.md) (todo caso de uso, comportamiento esperado, escenarios de error).
+
+**Completado**: Etapa 0 (cleanup del template) → Etapa 5 (API layer). Pendiente: Etapa 6 (seed data), Etapa 7 (tests de aceptación end-to-end).
+
+### Decisiones de §3 ya resueltas
+1. MediatR (no handlers manuales) — ya wireado en `Application/DependencyInjection.cs`.
+2. Minimal APIs vía patrón `IEndpointGroup` (`src/Web/Infrastructure/`), no Controllers.
+3. Job diario: **endpoint de trigger manual** (`POST /api/v1/calendars/resolve-daily-catalog`), no `BackgroundService`. No es parte del contrato público de §0 — es ops/demo.
+4. Sin auth en esta etapa — confirmado, Identity removido por completo en Etapa 0.
+
+### Gotchas técnicos ya resueltos (no los repitas)
+- **EF Core owned-type constructor binding no soporta navegación anidada en el constructor.** `DeliveryAddress` anida `Coordinates` como parámetro de ctor — EF no puede bindear eso vía constructor binding. Solución aplicada: ctor privado sin parámetros + setters privados en `DeliveryAddress` (mismo patrón que las entidades). Si agregás otro VO que anide otro VO owned, vas a pisar el mismo problema.
+- **Misma instancia de un owned type en dos navigations del mismo entity rompe el change tracker de EF.** `ProductionOrderLine` tiene `Coordinates` tanto embebido en `Address` como duplicado top-level (requisito explícito de §1). Nunca reuses la referencia — siempre `new Coordinates(...)`, no `address.Coordinates`.
+- **`dotnet ef` tool debe matchear la versión de `Microsoft.EntityFrameworkCore.Design`** en `Directory.Packages.props`, si no tira `MSB4057`. Ver README §Database migrations.
+- **`ApplicationDbContextInitialiser` usa `MigrateAsync()`**, no `EnsureCreated` — ya hay migraciones reales committeadas (`src/Infrastructure/Data/Migrations/`).
+- **Enums en JSON**: configurado `JsonStringEnumConverter` global (`Web/DependencyInjection.cs`) — todo enum (`DayStatus`, `DeliveryResult`, etc.) serializa/deserializa como string, no int.
+- **`AddProblemDetails()` es obligatorio** junto con `AddExceptionHandler<ProblemDetailsExceptionHandler>()` — sin eso, cualquier excepción no reconocida por el handler custom rompe con un meta-exception feo en vez de devolver un 500 limpio.
+
+### Mapeo de excepciones de dominio → HTTP (ya implementado en `ProblemDetailsExceptionHandler`)
+`ValidationException`→400, `NotFoundException`→404, `DeliveryWindowLockedException`→409, `InvalidDeliveryDayTransitionException`→422.
+
+### Dónde está cada cosa
+- Repos: `ICalendarRepository`/`IProductionOrderRepository` (puertos en Application) → `CalendarRepository`/`ProductionOrderRepository` (impl en `Infrastructure/Data/Repositories`), toman `ApplicationDbContext` concreto directo, no `IApplicationDbContext` (esa interfaz es solo `SaveChangesAsync`, el unit-of-work).
+- `ICatalogPort` mockeado: `Infrastructure/Catalog/MockCatalogPort.cs` — fixture determinística por `planId`+`date`, sin HTTP real.
+- Endpoints: `src/Web/Endpoints/Calendars.cs`, un solo `IEndpointGroup` con `RoutePrefix = "/api/v1"` cubriendo los 7 contratos de §0 + el trigger manual.
+- Colección de pruebas manuales: `src/Web/Web.http`.

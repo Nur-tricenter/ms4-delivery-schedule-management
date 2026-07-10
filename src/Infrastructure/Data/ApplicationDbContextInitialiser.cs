@@ -22,11 +22,13 @@ public class ApplicationDbContextInitialiser
 {
     private readonly ILogger<ApplicationDbContextInitialiser> _logger;
     private readonly ApplicationDbContext _context;
+    private readonly TimeProvider _timeProvider;
 
-    public ApplicationDbContextInitialiser(ILogger<ApplicationDbContextInitialiser> logger, ApplicationDbContext context)
+    public ApplicationDbContextInitialiser(ILogger<ApplicationDbContextInitialiser> logger, ApplicationDbContext context, TimeProvider timeProvider)
     {
         _logger = logger;
         _context = context;
+        _timeProvider = timeProvider;
     }
 
     public async Task InitialiseAsync()
