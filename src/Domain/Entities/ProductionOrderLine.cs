@@ -24,7 +24,7 @@ public class ProductionOrderLine : BaseEntity
         DeliveryDayId = deliveryDayId;
         PatientId = patientId;
         Address = address;
-        Coordinates = address.Coordinates;
+        Coordinates = new Coordinates(address.Coordinates.Latitude, address.Coordinates.Longitude);
         PlanRef = planRef;
         Hour = hour;
     }

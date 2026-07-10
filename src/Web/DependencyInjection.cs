@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using delivery_schedule_management.Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,6 +13,13 @@ public static class DependencyInjection
         builder.Services.AddHttpContextAccessor();
 
         builder.Services.AddExceptionHandler<ProblemDetailsExceptionHandler>();
+        // Fallback ProblemDetails writer for exceptions ProblemDetailsExceptionHandler doesn't
+        // recognise — without this, UseExceptionHandler re-executes the pipeline at a blank
+        // path and blows up with a meta-exception instead of returning a clean 500.
+        builder.Services.AddProblemDetails();
+
+        builder.Services.ConfigureHttpJsonOptions(options =>
+            options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
         // Customise default API behaviour
         builder.Services.Configure<ApiBehaviorOptions>(options =>

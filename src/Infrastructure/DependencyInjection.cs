@@ -1,6 +1,9 @@
 using delivery_schedule_management.Application.Common.Interfaces;
+using delivery_schedule_management.Infrastructure.Catalog;
+using delivery_schedule_management.Infrastructure.Common;
 using delivery_schedule_management.Infrastructure.Data;
 using delivery_schedule_management.Infrastructure.Data.Interceptors;
+using delivery_schedule_management.Infrastructure.Data.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
@@ -32,5 +35,10 @@ public static class DependencyInjection
         builder.Services.AddScoped<ApplicationDbContextInitialiser>();
 
         builder.Services.AddSingleton(TimeProvider.System);
+
+        builder.Services.AddScoped<ICalendarRepository, CalendarRepository>();
+        builder.Services.AddScoped<IProductionOrderRepository, ProductionOrderRepository>();
+        builder.Services.AddScoped<IClock, SystemClock>();
+        builder.Services.AddSingleton<ICatalogPort, MockCatalogPort>();
     }
 }

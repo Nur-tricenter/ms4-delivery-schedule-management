@@ -20,6 +20,21 @@
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <PackageReference Include="System.Security.Cryptography.Xml" />
+        <PackageReference Include="Shouldly" />
+        <PackageReference Include="Respawn" />
+        <PackageReference Include="Aspire.Hosting.Testing" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Using Include="Aspire.Hosting" />
+      <Using Include="Aspire.Hosting.ApplicationModel" />
+      <Using Include="Aspire.Hosting.Testing" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\src\Infrastructure\Infrastructure.csproj" />
+      <ProjectReference Include="..\..\src\Shared\Shared.csproj" />
+      <ProjectReference Include="..\TestAppHost\TestAppHost.csproj" />
     </ItemGroup>
 
 </Project>

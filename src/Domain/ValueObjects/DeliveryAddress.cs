@@ -7,15 +7,17 @@ namespace delivery_schedule_management.Domain.ValueObjects;
 /// </summary>
 public sealed record DeliveryAddress
 {
-    public string Street { get; }
+    public string Street { get; private set; } = null!;
 
-    public string City { get; }
+    public string City { get; private set; } = null!;
 
-    public string? References { get; }
+    public string? References { get; private set; }
 
-    public string? Notes { get; }
+    public string? Notes { get; private set; }
 
-    public Coordinates Coordinates { get; }
+    public Coordinates Coordinates { get; private set; } = null!;
+
+    private DeliveryAddress() { } // EF Core
 
     public DeliveryAddress(string street, string city, Coordinates coordinates, string? references = null, string? notes = null)
     {

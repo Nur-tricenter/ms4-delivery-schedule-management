@@ -5,6 +5,7 @@
     <File Path="CLAUDE.md" />
     <File Path="Directory.Build.props" />
     <File Path="Directory.Packages.props" />
+    <File Path="FLOWS.md" />
     <File Path="global.json" />
     <File Path="README.md" />
   </Folder>
