@@ -1,183 +1,183 @@
-# MS4 — Delivery Calendar — Flujos y Comportamiento Esperado
+# MS4 — Delivery Calendar — Flows and Expected Behavior
 
-Documento vivo. Cubre lo implementado hasta Etapa 4 (Domain + Application + Infrastructure). Cada flujo mapea a un caso de uso (`Commands`/`Queries` en `src/Application/Calendars`) y, eventualmente, a un endpoint de la tabla en `CLAUDE.md` §0. Los códigos HTTP marcados como "(Etapa 5)" aún no existen — son el mapeo objetivo ya decidido, pendiente de implementar en la capa API.
+Living document. Covers everything implemented through Stage 5 (Domain + Application + Infrastructure + API). Each flow maps to a use case (`Commands`/`Queries` under `src/Application/Calendars`) and to an endpoint in the `CLAUDE.md` §0 table. HTTP status codes are live — see `src/Web/Infrastructure/ProblemDetailsExceptionHandler.cs` for the exception → status mapping.
 
-Convenciones:
-- **Actor**: quién dispara el flujo (MS3, Frontend/paciente, MS5, job interno).
-- **Precondición**: estado requerido antes de ejecutar.
-- **Happy path**: comportamiento esperado sin errores.
-- **Escenarios de error**: cada uno con la excepción de dominio/aplicación lanzada y el código HTTP objetivo.
-- **Idempotencia / edge cases**: comportamiento en reintentos, límites exactos, condiciones de carrera lógicas.
+Conventions:
+- **Actor**: who triggers the flow (MS3, Frontend/patient, MS5, internal job).
+- **Precondition**: required state before execution.
+- **Happy path**: expected behavior with no errors.
+- **Error scenarios**: each with the domain/application exception thrown and the resulting HTTP code.
+- **Idempotency / edge cases**: behavior on retries, exact boundaries, logical race conditions.
 
 ---
 
-## A. Creación de calendario
+## A. Calendar creation
 
-### A.1 — Crear calendario de entregas (`CreateScheduleCommand`)
+### A.1 — Create delivery schedule (`CreateScheduleCommand`)
 
 - **Actor**: MS3 (`POST /api/v1/schedule`).
 - **Input**: `contractId`, `patientId`, `planId`, `duration` (15|30), `startDate`.
-- **Precondición**: ninguna — es el punto de entrada del aggregate.
-- **Happy path**: crea `DeliveryCalendar` en estado `Active`, genera `duration` `DeliveryDay`s consecutivos desde `startDate`, todos en `Status = Pending`, sin address ni recipe. Devuelve `calendarId` + lista de días.
-- **Escenarios de error**:
-  - `duration` distinto de 15 o 30 → `ArgumentOutOfRangeException` en `PlanDuration` ctor → **422** (Etapa 5).
-  - `contractId`/`patientId`/`planId` = `Guid.Empty` → `ArgumentException` en el VO correspondiente → **422** (Etapa 5).
-  - `startDate` = `default` → `ArgumentException` en `DeliveryDate` ctor → **422** (Etapa 5).
-- **Idempotencia**: si ya existe un calendario con el mismo `contractId`, **no crea uno nuevo** — devuelve el calendario existente tal cual (mismo `calendarId`, mismos días, sin re-generar). Esto es intencional: replays de MS3 (reintentos de red, etc.) no deben duplicar. Enforced doblemente: en el handler (`GetByContractIdAsync` antes de crear) y en DB (índice único sobre `ContractId`).
+- **Precondition**: none — this is the aggregate's entry point.
+- **Happy path**: creates a `DeliveryCalendar` in `Active` status, generates `duration` consecutive `DeliveryDay`s starting at `startDate`, all in `Status = Pending`, no address or recipe. Returns `calendarId` + the list of days.
+- **Error scenarios**:
+  - `duration` other than 15 or 30 → `ArgumentOutOfRangeException` in the `PlanDuration` ctor → **422**.
+  - `contractId`/`patientId`/`planId` = `Guid.Empty` → `ArgumentException` in the corresponding VO → **422**.
+  - `startDate` = `default` → `ArgumentException` in the `DeliveryDate` ctor → **422**.
+- **Idempotency**: if a calendar already exists for the same `contractId`, **no new one is created** — the existing calendar is returned as-is (same `calendarId`, same days, no regeneration). This is intentional: MS3 replays (network retries, etc.) must not duplicate. Enforced twice: in the handler (`GetByContractIdAsync` before creating) and in the DB (unique index on `ContractId`).
 - **Test coverage**: `CreateScheduleCommandTests`, `CalendarRepositoryTests.GetByContractIdAsync_...`.
 
 ---
 
-## B. Mutación de días de entrega
+## B. Delivery day mutation
 
-Todos los flujos de esta categoría operan sobre un `DeliveryDay` dentro de un `DeliveryCalendar` ya existente.
+All flows in this category operate on a `DeliveryDay` inside an already-existing `DeliveryCalendar`.
 
-### B.1 — Fijar dirección de entrega (`SetDeliveryAddressCommand`)
+### B.1 — Set delivery address (`SetDeliveryAddressCommand`)
 
-- **Actor**: Frontend/paciente (`POST /api/v1/calendars/{id}/addresses`).
+- **Actor**: Frontend/patient (`POST /api/v1/calendars/{id}/addresses`).
 - **Input**: `calendarId`, `dayId`, `street`, `city`, `latitude`, `longitude`, `references?`, `notes?`.
-- **Precondición**: día en `Pending` o `Scheduled`.
-- **Happy path**: construye `DeliveryAddress` (incluye `Coordinates` embebidas — endpoint entrega address + lat/long en un solo payload, ver nota en `DeliveryAddress.cs`), la asigna al día, día pasa a `Status = Scheduled`. Puede llamarse de nuevo para actualizar la dirección mientras el día siga en `Pending`/`Scheduled`.
-- **Escenarios de error**:
-  - `calendarId` no existe → `NotFoundException` → **404**.
-  - `dayId` no pertenece al calendario → `NotFoundException` → **404**.
-  - Día ya no está en `Pending`/`Scheduled` (ej. `ReadyForProduction`, `Delivered`, `Cancelled`) → `InvalidDeliveryDayTransitionException` → **422**.
-  - `latitude`/`longitude` fuera de rango → `ArgumentOutOfRangeException` en `Coordinates` ctor → **422**.
-  - `street`/`city` vacíos → `ArgumentException` en `DeliveryAddress` ctor → **422**.
-- **Idempotencia**: llamar dos veces con la misma dirección mientras el día sigue `Scheduled` es un no-op funcional (sobreescribe con el mismo valor, sin error).
+- **Precondition**: day in `Pending` or `Scheduled`.
+- **Happy path**: builds a `DeliveryAddress` (embeds `Coordinates` — the endpoint delivers address + lat/long in a single payload, see the note in `DeliveryAddress.cs`), assigns it to the day, day moves to `Status = Scheduled`. Can be called again to update the address while the day stays `Pending`/`Scheduled`.
+- **Error scenarios**:
+  - `calendarId` doesn't exist → `NotFoundException` → **404**.
+  - `dayId` doesn't belong to the calendar → `NotFoundException` → **404**.
+  - Day is no longer `Pending`/`Scheduled` (e.g. `ReadyForProduction`, `Delivered`, `Cancelled`) → `InvalidDeliveryDayTransitionException` → **422**.
+  - `latitude`/`longitude` out of range → `ArgumentOutOfRangeException` in the `Coordinates` ctor → **422**.
+  - `street`/`city` empty → `ArgumentException` in the `DeliveryAddress` ctor → **422**.
+- **Idempotency**: calling it twice with the same address while the day is still `Scheduled` is a functional no-op (overwrites with the same value, no error).
 - **Test coverage**: `SetDeliveryAddressCommandTests`, `CalendarRepositoryTests.SetAddress_ThenGetByDeliveryDayId_...`.
 
-### B.2 — Reprogramar fecha de entrega (`RescheduleDeliveryDayCommand`)
+### B.2 — Reschedule delivery date (`RescheduleDeliveryDayCommand`)
 
-- **Actor**: Frontend/paciente (`PUT /api/v1/calendars/{id}/dates`).
+- **Actor**: Frontend/patient (`PUT /api/v1/calendars/{id}/dates`).
 - **Input**: `calendarId`, `dayId`, `newDate`.
-- **Precondición**: día en `Pending` o `Scheduled`, y **fuera de la ventana de bloqueo de 48h** (ver regla global abajo).
-- **Happy path**: actualiza `Date` del día. No cambia `Status`.
-- **Escenarios de error**:
-  - `calendarId`/`dayId` no existen → `NotFoundException` → **404**.
-  - Faltan <48h para la fecha **actual** del día (antes de reprogramar) → `DeliveryWindowLockedException` → **409**.
-  - Día en estado `ReadyForProduction`/`InProduction`/`Delivered`/`Failed`/`Cancelled` (incluso si estuviera fuera de la ventana 48h) → `InvalidDeliveryDayTransitionException` → **422**.
-- **Regla 48h — caso límite exacto**: se compara contra la fecha **actual** del día (no la nueva). `deliveryInstant - now < 48h` → bloqueado. Exactamente a 48h0m0s0ms → permitido (no bloqueado). A 48h menos 1 tick → bloqueado. Cubierto en `DeliveryDayTests` con ambos límites exactos.
-- **Nota de diseño**: la regla se evalúa sobre la fecha vigente antes del cambio, no sobre `newDate`. Reprogramar a una fecha muy próxima (<48h en el futuro) está permitido siempre que el día actual esté fuera de ventana — el sistema no impide agendar entregas urgentes, solo protege contra mover una entrega ya inminente.
-- **Test coverage**: `RescheduleDeliveryDayCommandTests`, `DeliveryDayTests` (boundary exacto).
+- **Precondition**: day in `Pending` or `Scheduled`, and **outside the 48h lock window** (see the global rule below).
+- **Happy path**: updates the day's `Date`. Does not change `Status`.
+- **Error scenarios**:
+  - `calendarId`/`dayId` don't exist → `NotFoundException` → **404**.
+  - Less than 48h remain until the day's **current** date (before rescheduling) → `DeliveryWindowLockedException` → **409**.
+  - Day in `ReadyForProduction`/`InProduction`/`Delivered`/`Failed`/`Cancelled` (even if outside the 48h window) → `InvalidDeliveryDayTransitionException` → **422**.
+- **48h rule — exact boundary case**: compared against the day's **current** date (not the new one). `deliveryInstant - now < 48h` → locked. Exactly 48h0m0s0ms → allowed (not locked). 48h minus 1 tick → locked. Covered in `DeliveryDayTests` with both exact boundaries.
+- **Design note**: the rule is evaluated against the date in effect before the change, not against `newDate`. Rescheduling to a date very close in time (<48h in the future) is allowed as long as the day's current date is outside the window — the system doesn't prevent scheduling urgent deliveries, it only protects against moving a delivery that's already imminent.
+- **Test coverage**: `RescheduleDeliveryDayCommandTests`, `DeliveryDayTests` (exact boundary).
 
-### B.3 — Cancelar día de entrega (`CancelDeliveryDayCommand`)
+### B.3 — Cancel delivery day (`CancelDeliveryDayCommand`)
 
-- **Actor**: Frontend/paciente (`POST /api/v1/calendars/{id}/cancel-day`).
+- **Actor**: Frontend/patient (`POST /api/v1/calendars/{id}/cancel-day`).
 - **Input**: `calendarId`, `dayId`.
-- **Precondición**: día no está ya en `Delivered`, `Failed`, `Cancelled` o `InProduction`, y fuera de la ventana de 48h.
-- **Happy path**: día pasa a `Status = Cancelled`. Terminal — no se puede revertir.
-- **Escenarios de error**:
-  - `calendarId`/`dayId` no existen → `NotFoundException` → **404**.
-  - Faltan <48h para la fecha del día → `DeliveryWindowLockedException` → **409**.
-  - Día ya `Delivered`/`Failed`/`Cancelled`/`InProduction` → `InvalidDeliveryDayTransitionException` → **422**.
-- **Nota**: a diferencia de reschedule, cancel **sí** permite cancelar un día `ReadyForProduction` (siempre que esté fuera de la ventana 48h) — solo bloquea los estados terminales/en curso.
+- **Precondition**: day is not already `Delivered`, `Failed`, `Cancelled`, or `InProduction`, and is outside the 48h window.
+- **Happy path**: day moves to `Status = Cancelled`. Terminal — cannot be reverted.
+- **Error scenarios**:
+  - `calendarId`/`dayId` don't exist → `NotFoundException` → **404**.
+  - Less than 48h remain until the day's date → `DeliveryWindowLockedException` → **409**.
+  - Day already `Delivered`/`Failed`/`Cancelled`/`InProduction` → `InvalidDeliveryDayTransitionException` → **422**.
+- **Note**: unlike reschedule, cancel **does** allow cancelling a `ReadyForProduction` day (as long as it's outside the 48h window) — it only blocks terminal/in-progress states.
 - **Test coverage**: `CancelDeliveryDayCommandTests`.
 
 ---
 
-## C. Pipeline de producción (interno, sin exposición HTTP directa)
+## C. Production pipeline (internal, no direct HTTP exposure)
 
-### C.1 — Resolución diaria de catálogo (`ResolveDailyCatalogCommand`)
+### C.1 — Daily catalog resolution (`ResolveDailyCatalogCommand`)
 
-- **Actor**: job interno. En Etapa 4 no hay disparador automático (`BackgroundService`) — se ejecuta invocando el comando directamente (tests) o, en Etapa 5, vía un endpoint de trigger manual (decisión abierta de `CLAUDE.md` §3.3, resuelta a favor de trigger manual por simplicidad de esta etapa).
-- **Input**: `targetDate` opcional (si es `null`, usa "mañana" relativo a `IClock.Now`).
-- **Precondición**: debe correr **antes** de que MS3 llame `GET /calendars/active-tomorrow` para la misma fecha — MS4 nunca resuelve catálogo on-demand dentro de ese request.
+- **Actor**: internal job. There is no `BackgroundService` trigger — it runs by invoking the command directly (tests) or via the manual trigger endpoint (`POST /api/v1/calendars/resolve-daily-catalog`, resolved open decision from `CLAUDE.md` §3.3, chosen for simplicity at this stage).
+- **Input**: optional `targetDate` (if `null`, uses "tomorrow" relative to `IClock.Now`).
+- **Precondition**: must run **before** MS3 calls `GET /calendars/active-tomorrow` for the same date — MS4 never resolves the catalog on-demand inside that request.
 - **Happy path**:
-  1. Busca todos los calendarios con algún día en `targetDate` (`ICalendarRepository.GetActiveForDeliveryDateAsync`).
-  2. Para cada día en `Status = Scheduled` que caiga en `targetDate`: llama `ICatalogPort.GetDayResolutionAsync(planId, date)` (mockeado — fixture determinística, no HTTP real a MS2), setea `RecipeRef`/`Portions`, día pasa a `ReadyForProduction`.
-  3. Reconstruye/actualiza el `ProductionOrder` de `targetDate` con `OrderConsolidationService.Consolidate` — toma **todos** los días `ReadyForProduction` de esa fecha (no solo los recién resueltos en este run), across calendars.
-- **Escenarios de error**:
-  - Día en `Scheduled` sin `Address` asignada, al momento de consolidar → `InvalidDeliveryDayTransitionException` (lanzada por `OrderConsolidationService`, no por el job) — un día sin dirección nunca debería llegar a `ReadyForProduction` en la práctica porque `MarkReadyForProduction` no valida esto; es un invariante cross-step a vigilar en Etapa 7.
-  - Días en `Pending` (sin address) en `targetDate` — se ignoran silenciosamente (no se resuelven, no entran en la orden). Quedan pendientes hasta que el paciente asigne dirección y el job vuelva a correr.
-- **Idempotencia / reejecución**: correr el job dos veces para la misma fecha es seguro. Si ya existe `ProductionOrder` para `targetDate`, se llama `ReplaceLines` (reemplaza todas las líneas, actualiza `GeneratedAt`) en vez de crear un duplicado — enforced también por índice único en `ProductionOrders.DeliveryDate`.
+  1. Finds every calendar with a day landing on `targetDate` (`ICalendarRepository.GetActiveForDeliveryDateAsync`).
+  2. For each day in `Status = Scheduled` on `targetDate`: calls `ICatalogPort.GetDayResolutionAsync(planId, date)` (mocked — deterministic fixture, no real HTTP call to MS2), sets `RecipeRef`/`Portions`, day moves to `ReadyForProduction`.
+  3. Rebuilds/updates `targetDate`'s `ProductionOrder` via `OrderConsolidationService.Consolidate` — picks up **every** `ReadyForProduction` day for that date (not just the ones resolved in this run), across all calendars.
+- **Error scenarios**:
+  - A `Scheduled` day with no `Address` assigned, at consolidation time → `InvalidDeliveryDayTransitionException` (thrown by `OrderConsolidationService`, not by the job) — a day with no address should never actually reach `ReadyForProduction` in practice because `MarkReadyForProduction` doesn't validate this; it's a cross-step invariant to watch in Stage 7.
+  - `Pending` days (no address) on `targetDate` — silently ignored (not resolved, not added to the order). They stay pending until the patient assigns an address and the job runs again.
+- **Idempotency / re-runs**: running the job twice for the same date is safe. If a `ProductionOrder` already exists for `targetDate`, `ReplaceLines` is called (replaces all lines, updates `GeneratedAt`) instead of creating a duplicate — also enforced by a unique index on `ProductionOrders.DeliveryDate`.
 - **Test coverage**: `ResolveDailyCatalogCommandTests`, `OrderConsolidationServiceTests`.
 
-### C.2 — Consolidación de orden de producción (`OrderConsolidationService`, domain service puro)
+### C.2 — Production order consolidation (`OrderConsolidationService`, pure domain service)
 
-- **Invocado por**: C.1, nunca directamente desde fuera.
-- **Comportamiento**: dado un set de calendarios + fecha + orden existente (o `null`), filtra días `ReadyForProduction` que matcheen la fecha, construye una `ProductionOrderLine` por día (con `PatientId`, `Address`, `PlanRef`, `Hour`), y crea o reemplaza las líneas de la orden.
-- **Edge case de diseño**: `Coordinates` vive tanto embebido en `DeliveryAddress` como duplicado como campo top-level en `ProductionOrderLine` (requisito explícito de `CLAUDE.md` §1 sobre la forma del entity). Son instancias VO distintas construidas a partir del mismo valor — nunca la misma referencia de objeto (ver nota de implementación: EF Core no permite que la misma instancia de un owned type esté en dos navigations distintas del mismo entity).
+- **Invoked by**: C.1, never directly from the outside.
+- **Behavior**: given a set of calendars + a date + an existing order (or `null`), filters `ReadyForProduction` days matching the date, builds one `ProductionOrderLine` per day (with `PatientId`, `Address`, `PlanRef`, `Hour`), and creates or replaces the order's lines.
+- **Design edge case**: `Coordinates` lives both embedded in `DeliveryAddress` and duplicated as a top-level field on `ProductionOrderLine` (explicit `CLAUDE.md` §1 requirement on the entity's shape). These are distinct VO instances built from the same value — never the same object reference (see implementation note: EF Core doesn't allow the same owned-type instance to sit in two different navigations on the same entity).
 
 ---
 
-## D. Resultado de entrega (cierre de ciclo)
+## D. Delivery result (cycle close-out)
 
-### D.1 — Aplicar resultado de entrega (`ApplyDeliveryResultCommand`)
+### D.1 — Apply delivery result (`ApplyDeliveryResultCommand`)
 
-- **Actor**: MS5, exclusivamente (`PATCH /api/v1/calendars/days/{dayId}/delivery-result`).
+- **Actor**: MS5, exclusively (`PATCH /api/v1/calendars/days/{dayId}/delivery-result`).
 - **Input**: `dayId`, `result` (`Delivered`|`Failed`), `photoUrl?`, `signatureUrl?`.
-- **Precondición**: día en `ReadyForProduction` o `InProduction`.
-- **Happy path**: día pasa a `Delivered` o `Failed` según `result`. Si viene `photoUrl` o `signatureUrl`, se construye `DeliveryEvidence` (timestamp = `IClock.Now`) y se guarda en el día.
-- **Escenarios de error**:
-  - `dayId` no existe (búsqueda es por `dayId` solo — el endpoint no recibe `calendarId` según contrato) → `NotFoundException` → **404**.
-  - Día en estado distinto de `ReadyForProduction`/`InProduction` **y** el resultado pedido difiere del estado actual → `InvalidDeliveryDayTransitionException` → **422**. Ejemplo: pedir `Delivered` sobre un día `Pending` o `Cancelled`.
-- **Idempotencia — regla central de este flujo**: llamar dos veces con el **mismo** `result` sobre un día que ya está en ese estado destino es un **no-op silencioso** — devuelve el estado actual sin lanzar excepción, no vuelve a tocar `Evidence`. Esto es lo que garantiza que reintentos de MS5 (timeouts, reentregas del mismo evento) no rompan el estado. Si se pide un `result` **distinto** al ya aplicado (ej. día ya `Delivered`, se pide `Failed`) → `InvalidDeliveryDayTransitionException` (no es un cambio de resultado válido, es terminal).
-- **Nunca se llega a `Delivered`/`Failed` por otro camino** — invariante de dominio explícito en `CLAUDE.md`: solo este endpoint puede hacer esa transición.
-- **Test coverage**: `ApplyDeliveryResultCommandTests` (incluye caso explícito de doble llamada idéntica).
+- **Precondition**: day in `ReadyForProduction` or `InProduction`.
+- **Happy path**: day moves to `Delivered` or `Failed` depending on `result`. If `photoUrl` or `signatureUrl` is provided, a `DeliveryEvidence` (timestamp = `IClock.Now`) is built and stored on the day.
+- **Error scenarios**:
+  - `dayId` doesn't exist (lookup is by `dayId` only — the endpoint doesn't receive `calendarId` per the contract) → `NotFoundException` → **404**.
+  - Day in a status other than `ReadyForProduction`/`InProduction` **and** the requested result differs from the current state → `InvalidDeliveryDayTransitionException` → **422**. Example: requesting `Delivered` on a `Pending` or `Cancelled` day.
+- **Idempotency — the central rule of this flow**: calling it twice with the **same** `result` on a day already in that target status is a **silent no-op** — returns the current state without throwing, doesn't touch `Evidence` again. This is what guarantees that MS5 retries (timeouts, redelivered events) don't break state. If a **different** `result` is requested than what's already applied (e.g. day already `Delivered`, requesting `Failed`) → `InvalidDeliveryDayTransitionException` (not a valid result change, it's terminal).
+- **Never reached via any other path** — explicit domain invariant in `CLAUDE.md`: only this endpoint can perform this transition to `Delivered`/`Failed`.
+- **Test coverage**: `ApplyDeliveryResultCommandTests` (includes an explicit identical-double-call case).
 
 ---
 
-## E. Consultas
+## E. Queries
 
-### E.1 — Obtener calendario completo (`GetCalendarQuery`)
+### E.1 — Get full calendar (`GetCalendarQuery`)
 
-- **Actor**: Frontend / interno (`GET /api/v1/calendars/{id}`).
-- **Happy path**: devuelve el calendario completo con todos sus días, sin filtrar por estado.
-- **Escenarios de error**: `calendarId` no existe → `NotFoundException` → **404**.
+- **Actor**: Frontend / internal (`GET /api/v1/calendars/{id}`).
+- **Happy path**: returns the full calendar with all its days, unfiltered by status.
+- **Error scenarios**: `calendarId` doesn't exist → `NotFoundException` → **404**.
 - **Test coverage**: `GetCalendarQueryTests`.
 
-### E.2 — Orden de producción activa de mañana (`GetActiveTomorrowQuery`)
+### E.2 — Active production order for tomorrow (`GetActiveTomorrowQuery`)
 
-- **Actor**: MS3 (`GET /api/v1/calendars/active-tomorrow`), doble propósito: consulta auxiliar **y** mecanismo por el cual MS3 obtiene la orden de producción diaria (sustituye el evento async `ProductionOrderRequired`).
-- **Input**: `date` opcional (default: mañana relativo a `IClock.Now`).
-- **Precondición**: asume que C.1 (`ResolveDailyCatalogCommand`) ya corrió para esa fecha. **Este query nunca dispara resolución on-demand.**
-- **Happy path**: lee el `ProductionOrder` ya consolidado para la fecha, devuelve sus líneas mapeadas a `{ packId, patientId, planId, hour, address, lat, long }`. `packId` se mapea a `DeliveryDayId` (no existe un concepto de "pack" separado en el dominio — es la unidad de entrega identificable más cercana, decisión de diseño documentada en `GetActiveTomorrowQuery.cs`).
-- **Caso sin datos**: si no existe `ProductionOrder` para la fecha (job no corrió aún, o no hay días elegibles), devuelve **lista vacía**, no error.
-- **Garantía de contenido**: solo puede devolver días que estuvieron `ReadyForProduction` al momento en que corrió la consolidación — nunca días `Pending`/`Scheduled`/`Cancelled`.
+- **Actor**: MS3 (`GET /api/v1/calendars/active-tomorrow`), dual purpose: auxiliary query **and** the mechanism by which MS3 obtains the daily production order (replaces the async `ProductionOrderRequired` event).
+- **Input**: optional `date` (default: tomorrow relative to `IClock.Now`).
+- **Precondition**: assumes C.1 (`ResolveDailyCatalogCommand`) already ran for that date. **This query never triggers on-demand resolution.**
+- **Happy path**: reads the already-consolidated `ProductionOrder` for the date, returns its lines mapped to `{ packId, patientId, planId, hour, address, lat, long }`. `packId` maps to `DeliveryDayId` (there's no separate "pack" concept in the domain — it's the closest identifiable delivery unit, a design decision documented in `GetActiveTomorrowQuery.cs`).
+- **No-data case**: if no `ProductionOrder` exists for the date (job hasn't run yet, or no days were eligible), returns an **empty list**, not an error.
+- **Content guarantee**: can only return days that were `ReadyForProduction` at the time consolidation ran — never `Pending`/`Scheduled`/`Cancelled` days.
 - **Test coverage**: `GetActiveTomorrowQueryTests`.
 
 ---
 
-## Reglas globales (aplican a múltiples flujos)
+## Global rules (apply across multiple flows)
 
-### Regla de bloqueo de 48h (`DeliveryDay.EnsureOutsideLockWindow`)
+### 48h lock rule (`DeliveryDay.EnsureOutsideLockWindow`)
 
-Aplica a: B.2 (reschedule), B.3 (cancel). No aplica a B.1 (set address), C.1, D.1.
+Applies to: B.2 (reschedule), B.3 (cancel). Does not apply to B.1 (set address), C.1, D.1.
 
-- Fórmula: `deliveryInstant - now < 48h` → bloqueado (`DeliveryWindowLockedException`).
-- `deliveryInstant` se construye como medianoche UTC de la fecha del día (`DeliveryDate.Value.ToDateTime(TimeOnly.MinValue)`, offset cero) — no usa `DeliveryHour`.
-- Límite exacto: a **48h00m00s000ms** exactas → permitido. A **47h59m59.999s** → bloqueado. Verificado en `DeliveryDayTests` con `AddHours(-48)` (permitido) vs `AddHours(-48).AddTicks(1)` (bloqueado).
+- Formula: `deliveryInstant - now < 48h` → locked (`DeliveryWindowLockedException`).
+- `deliveryInstant` is built as UTC midnight of the day's date (`DeliveryDate.Value.ToDateTime(TimeOnly.MinValue)`, zero offset) — does not use `DeliveryHour`.
+- Exact boundary: at exactly **48h00m00s000ms** → allowed. At **47h59m59.999s** → locked. Verified in `DeliveryDayTests` with `AddHours(-48)` (allowed) vs `AddHours(-48).AddTicks(1)` (locked).
 
-### Transiciones de estado válidas (`DayStatus`)
+### Valid state transitions (`DayStatus`)
 
 ```
 Pending ──SetAddress──> Scheduled ──MarkReadyForProduction──> ReadyForProduction ──ApplyDeliveryResult──> Delivered
    │                        │                                        │                                       │
    │                        │                                        └──ApplyDeliveryResult──> Failed         │
    │                        │                                                                                 │
-   ├──Reschedule (fuera 48h, self-loop)                                                                       │
-   ├──Cancel (fuera 48h)──> Cancelled  <──Cancel (fuera 48h)── Scheduled                                       │
-   └──Cancel (fuera 48h)──> Cancelled                                                                          │
-                                          ReadyForProduction ──Cancel (fuera 48h)──> Cancelled                 │
-                                          InProduction ──ApplyDeliveryResult──> Delivered/Failed (idempotente) ┘
+   ├──Reschedule (outside 48h, self-loop)                                                                     │
+   ├──Cancel (outside 48h)──> Cancelled  <──Cancel (outside 48h)── Scheduled                                   │
+   └──Cancel (outside 48h)──> Cancelled                                                                        │
+                                          ReadyForProduction ──Cancel (outside 48h)──> Cancelled                │
+                                          InProduction ──ApplyDeliveryResult──> Delivered/Failed (idempotent)  ┘
 ```
 
-Cualquier transición no listada arriba lanza `InvalidDeliveryDayTransitionException`. `InProduction` no tiene un comando propio en Etapa 3 (no hay flujo que lo setee explícitamente todavía — MS4 no expone un paso de "iniciar producción"; queda como estado reservado del enum, alcanzable solo si se decide exponerlo en una etapa futura).
+Any transition not listed above throws `InvalidDeliveryDayTransitionException`. `InProduction` has no command of its own yet (nothing in the current set of flows explicitly sets it — MS4 doesn't expose a "start production" step; it stays a reserved enum state, reachable only if a future stage decides to expose it).
 
-### Idempotencia — resumen cross-flow
+### Idempotency — cross-flow summary
 
-| Flujo | Mecanismo de idempotencia |
+| Flow | Idempotency mechanism |
 |---|---|
-| A.1 CreateSchedule | Lookup previo por `ContractId` + índice único en DB |
-| C.1 ResolveDailyCatalog | `ReplaceLines` sobre orden existente + índice único en `DeliveryDate` |
-| D.1 ApplyDeliveryResult | No-op si `Status` ya es el `targetStatus` pedido |
+| A.1 CreateSchedule | Prior lookup by `ContractId` + unique DB index |
+| C.1 ResolveDailyCatalog | `ReplaceLines` on the existing order + unique index on `DeliveryDate` |
+| D.1 ApplyDeliveryResult | No-op if `Status` already equals the requested `targetStatus` |
 
 ---
 
-## Fuera de alcance de estos flujos (documentado, no implementado)
+## Out of scope for these flows (documented, not implemented)
 
-- Autenticación/autorización — ningún flujo valida quién llama (decisión confirmada: sin auth en esta etapa).
-- Transición explícita a `InProduction`.
-- Reintentos/outbox para `ICatalogPort` — el mock siempre responde determinísticamente, sin fallos simulados.
-- Disparo automático (cron/`BackgroundService`) de C.1 — pendiente de decisión en Etapa 5 (endpoint manual vs. `BackgroundService`).
+- Authentication/authorization — no flow validates who's calling (confirmed decision: no auth at this stage).
+- Explicit transition to `InProduction`.
+- Retries/outbox for `ICatalogPort` — the mock always responds deterministically, no simulated failures.
+- Automatic trigger (cron/`BackgroundService`) for C.1 — resolved as manual trigger, see `CLAUDE.md` §5.

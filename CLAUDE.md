@@ -1,47 +1,49 @@
-# MS4 — Delivery Calendar — Plan de Implementación
+# MS4 — Delivery Calendar — Implementation Plan
 
-Stack: **.NET Aspire + Clean Architecture** · Persistencia: **Postgres** (orquestado por Aspire, EF Core) · Responsable: Franklin Andre Romero Padilla
+Stack: **.NET Aspire + Clean Architecture** · Persistence: **Postgres** (orchestrated by Aspire, EF Core) · Owner: Franklin Andre Romero Padilla
 
-Este documento es la base para que un agente de codificación ejecute la implementación por etapas. Cada etapa tiene entradas, tareas y un "definition of done" verificable (compila + corre + tests).
+This document is the basis for a coding agent to execute the implementation in stages. Each stage has inputs, tasks, and a verifiable "definition of done" (builds + runs + tests).
+
+All docs and code in this repository must be written in English.
 
 ---
 
-## 0. Contratos de entrada (fijos, no se re-discuten en código)
+## 0. Input contracts (fixed, not renegotiated in code)
 
-### Endpoints expuestos por MS4
+### Endpoints exposed by MS4
 
-| # | Endpoint | Método | Cliente | Input | Output |
+| # | Endpoint | Method | Client | Input | Output |
 |---|---|---|---|---|---|
-| 1 | `/api/v1/schedule` | POST | MS3 | contractId, patientId, planId, duration(15\|30), startDate | calendarId, days[] (vacíos, status=PENDING) |
-| 2 | `/api/v1/calendars/active-tomorrow` | GET | MS3 | (ninguno / date opcional) | ProductionOrder consolidada: [{ packId, patientId, planId, hour, address, lat, long }] |
-| 3 | `/api/v1/calendars/{id}/dates` | PUT | Frontend (paciente) | dayId, newDate | dayId, status (aplica regla 48h) |
-| 4 | `/api/v1/calendars/{id}/addresses` | POST | Frontend (paciente) | dayId (o calendarId), address, lat, long | dayId, address |
-| 5 | `/api/v1/calendars/{id}/cancel-day` | POST | Frontend (paciente) | dayId | dayId, status=CANCELLED |
-| 6 | `/api/v1/calendars/{id}` | GET | Frontend / interno | calendarId | calendario completo con días |
+| 1 | `/api/v1/schedule` | POST | MS3 | contractId, patientId, planId, duration(15\|30), startDate | calendarId, days[] (empty, status=PENDING) |
+| 2 | `/api/v1/calendars/active-tomorrow` | GET | MS3 | (none / optional date) | Consolidated ProductionOrder: [{ packId, patientId, planId, hour, address, lat, long }] |
+| 3 | `/api/v1/calendars/{id}/dates` | PUT | Frontend (patient) | dayId, newDate | dayId, status (applies the 48h rule) |
+| 4 | `/api/v1/calendars/{id}/addresses` | POST | Frontend (patient) | dayId (or calendarId), address, lat, long | dayId, address |
+| 5 | `/api/v1/calendars/{id}/cancel-day` | POST | Frontend (patient) | dayId | dayId, status=CANCELLED |
+| 6 | `/api/v1/calendars/{id}` | GET | Frontend / internal | calendarId | full calendar with days |
 | 7 | `/api/v1/calendars/days/{dayId}/delivery-result` | PATCH | MS5 | dayId, result(DELIVERED\|FAILED), evidence | dayId, status |
 
-Nota: el endpoint #2 sirve doble propósito según la tabla del usuario — consulta auxiliar de MS3 **y** el mecanismo por el cual MS3 genera la orden de producción diaria (sustituye el evento async `ProductionOrderRequired` documentado en la fase de arquitectura). MS4 debe tener resuelto el día de mañana (recipe/portions vía MS2) **antes** de que llegue esta llamada — no resolver on-demand dentro del request.
+Note: endpoint #2 serves a dual purpose per the original requirements table — an auxiliary MS3 query **and** the mechanism by which MS3 generates the daily production order (replaces the async `ProductionOrderRequired` event documented in the architecture phase). MS4 must have tomorrow's day already resolved (recipe/portions via MS2) **before** this call arrives — never resolve on-demand inside the request.
 
-### Dependencia saliente de MS4
+### MS4 outbound dependency
 
-- `ICatalogPort` → `GET /catalog/plans/{id}/day/{date}` en MS2 (síncrono). En esta etapa: **mockeado** (adapter con fixture o HTTP a un stub).
+- `ICatalogPort` → `GET /catalog/plans/{id}/day/{date}` on MS2 (synchronous). At this stage: **mocked** (adapter with a fixture or HTTP against a stub).
 
 ---
 
-## 1. Modelo de dominio (reconciliado)
+## 1. Domain model (reconciled)
 
 **Aggregate: `DeliveryCalendar` (root)**
 - `Id`, `PatientId`, `ContractId`, `PlanId` (ref MS2), `Duration` (15|30), `StartDate`, `Status`
 - `Days: List<DeliveryDay>`
 
-**Entity: `DeliveryDay`** (dentro de `DeliveryCalendar`)
+**Entity: `DeliveryDay`** (inside `DeliveryCalendar`)
 - `Id`, `Date`, `Status` (`Pending`, `Scheduled`, `ReadyForProduction`, `InProduction`, `Delivered`, `Failed`, `Cancelled`)
 - `Address: DeliveryAddress?`
 - `DeliveryHour: TimeOnly?`
-- `RecipeRef`, `Portions` (resueltos por job diario vía `ICatalogPort`, cacheados)
-- `DeliveryEvidence?` (foto/firma/timestamp ref, al cerrar ciclo)
+- `RecipeRef`, `Portions` (resolved by the daily job via `ICatalogPort`, cached)
+- `DeliveryEvidence?` (photo/signature/timestamp ref, when the cycle closes)
 
-**Aggregate: `ProductionOrder` (root)** — snapshot consolidado del día siguiente
+**Aggregate: `ProductionOrder` (root)** — consolidated snapshot for the next day
 - `Id`, `ProductionDate` (D-1), `DeliveryDate` (D)
 - `Lines: List<ProductionOrderLine>`
 - `GeneratedAt`, `Status`
@@ -53,42 +55,42 @@ Nota: el endpoint #2 sirve doble propósito según la tabla del usuario — cons
 - `DeliveryAddress` (street, city, references, notes)
 - `Coordinates` (lat, long)
 - `DeliveryDate`
-- `DayStatus` (enum arriba)
+- `DayStatus` (enum above)
 - `PlanDuration` (15|30)
 - `ContractReference`, `PlanReference`, `RecipeReference`
 - `PortionQuantity`
 
 **Domain Services**
-- `OrderConsolidationService`: dado un `DeliveryCalendar[]` con `DeliveryDay` cuya fecha = mañana y status `ReadyForProduction`, construye/actualiza el `ProductionOrder` del día.
-- `DailyCatalogResolutionService`: job diario que, para cada `DeliveryDay` de mañana en status `Scheduled`, llama `ICatalogPort` y setea `RecipeRef`/`Portions`, pasando el día a `ReadyForProduction`.
+- `OrderConsolidationService`: given `DeliveryCalendar[]` with a `DeliveryDay` whose date is tomorrow and status `ReadyForProduction`, builds/updates the day's `ProductionOrder`.
+- `DailyCatalogResolutionService`: daily job that, for every tomorrow's `DeliveryDay` in status `Scheduled`, calls `ICatalogPort` and sets `RecipeRef`/`Portions`, moving the day to `ReadyForProduction`.
 
-**Reglas de negocio invariantes**
-- No se puede modificar fecha ni cancelar un `DeliveryDay` si `Date - Now < 48h`.
-- `POST /schedule` es idempotente por `contractId` (no debe crear un segundo calendario para el mismo contrato).
-- `DeliveryDay` solo pasa a `Delivered`/`Failed` vía el endpoint de MS5, nunca manualmente.
+**Invariant business rules**
+- A `DeliveryDay`'s date cannot be changed nor cancelled if `Date - Now < 48h`.
+- `POST /schedule` is idempotent by `contractId` (must not create a second calendar for the same contract).
+- A `DeliveryDay` only moves to `Delivered`/`Failed` via the MS5 endpoint, never manually.
 
 **Outbound port**
 - `ICatalogPort.GetDayResolution(planId, date) → (RecipeRef, Portions)`
 
 ---
 
-## 2. Etapas de ejecución (para el agente)
+## 2. Execution stages (for the agent)
 
-### Etapa 1 — Scaffolding de solución (Aspire + Clean Architecture)
-- Crear solución `.NET Aspire`: `MS4.AppHost`, `MS4.ServiceDefaults`, `MS4.Api`, `MS4.Application`, `MS4.Domain`, `MS4.Infrastructure`.
-- `MS4.Domain`: sin dependencias externas (POCO puro, no EF, no ASP.NET).
-- Referencias: `Api → Application → Domain`, `Infrastructure → Application/Domain`, `Api → Infrastructure` (composition root), `AppHost → Api` + recurso Postgres.
-- **DoD**: `dotnet build` compila toda la solución vacía, `dotnet run` en AppHost levanta Postgres + Api sin errores.
+### Stage 1 — Solution scaffolding (Aspire + Clean Architecture)
+- Create a `.NET Aspire` solution: `MS4.AppHost`, `MS4.ServiceDefaults`, `MS4.Api`, `MS4.Application`, `MS4.Domain`, `MS4.Infrastructure`.
+- `MS4.Domain`: no external dependencies (pure POCO, no EF, no ASP.NET).
+- References: `Api → Application → Domain`, `Infrastructure → Application/Domain`, `Api → Infrastructure` (composition root), `AppHost → Api` + Postgres resource.
+- **DoD**: `dotnet build` compiles the whole empty solution, `dotnet run` on AppHost brings up Postgres + Api with no errors.
 
-### Etapa 2 — Modelo de dominio puro
-- Implementar aggregates, entities, VOs y domain services de la sección 1 en `MS4.Domain`.
-- VOs como `record` inmutables con validación en el constructor (ej. `Coordinates` valida rangos lat/long).
-- Invariantes de negocio (regla 48h, transiciones de estado válidas) como métodos del aggregate (`DeliveryDay.Cancel(now)`, `DeliveryDay.Reschedule(newDate, now)`), nunca en capa externa.
-- **DoD**: tests unitarios de dominio (xUnit) cubriendo: regla 48h (caso límite exacto), transiciones de estado inválidas lanzan excepción de dominio, creación de calendario vacío genera N días correctos según duration.
+### Stage 2 — Pure domain model
+- Implement the aggregates, entities, VOs, and domain services from section 1 in `MS4.Domain`.
+- VOs as immutable `record`s with validation in the constructor (e.g. `Coordinates` validates lat/long ranges).
+- Business invariants (48h rule, valid state transitions) as aggregate methods (`DeliveryDay.Cancel(now)`, `DeliveryDay.Reschedule(newDate, now)`), never in an outer layer.
+- **DoD**: domain unit tests (xUnit) covering: the 48h rule (exact boundary case), invalid state transitions throw a domain exception, creating an empty calendar generates the correct N days per duration.
 
-### Etapa 3 — Application layer (casos de uso)
-- Patrón: Commands/Queries + Handlers (MediatR o manual, definir).
-- Casos de uso mínimos:
+### Stage 3 — Application layer (use cases)
+- Pattern: Commands/Queries + Handlers (MediatR or manual, to be decided).
+- Minimum use cases:
   - `CreateScheduleCommand` (endpoint 1)
   - `GetActiveTomorrowQuery` (endpoint 2)
   - `RescheduleDeliveryDayCommand` (endpoint 3)
@@ -96,81 +98,83 @@ Nota: el endpoint #2 sirve doble propósito según la tabla del usuario — cons
   - `CancelDeliveryDayCommand` (endpoint 5)
   - `GetCalendarQuery` (endpoint 6)
   - `ApplyDeliveryResultCommand` (endpoint 7)
-  - `ResolveDailyCatalogJob` (job interno, no expuesto)
-- Puertos definidos aquí: `ICalendarRepository`, `IProductionOrderRepository`, `ICatalogPort`, `IClock` (para testear regla 48h sin depender de `DateTime.Now`).
-- **DoD**: handlers testeados con repos in-memory fake, sin infraestructura real.
+  - `ResolveDailyCatalogJob` (internal job, not exposed)
+- Ports defined here: `ICalendarRepository`, `IProductionOrderRepository`, `ICatalogPort`, `IClock` (to test the 48h rule without depending on `DateTime.Now`).
+- **DoD**: handlers tested against in-memory fake repos, no real infrastructure.
 
-### Etapa 4 — Infrastructure
-- EF Core + Postgres: `DbContext`, configuraciones de entidades (mapeo de VOs como owned types), migraciones iniciales.
-- Implementación de `ICalendarRepository`, `IProductionOrderRepository`.
-- `ICatalogPort`: adapter mockeado (HttpClient contra un stub local o fixture estático — **no** contra MS2 real todavía).
-- Background job `ResolveDailyCatalogJob` como `IHostedService`/`BackgroundService` con horario fijo (ej. cron diario) o trigger manual para testing.
-- **DoD**: migración aplica sobre Postgres real (vía Aspire), repos persisten y recuperan correctamente contra DB real (test de integración con Testcontainers o Aspire testing).
+### Stage 4 — Infrastructure
+- EF Core + Postgres: `DbContext`, entity configurations (mapping VOs as owned types), initial migrations.
+- Implementation of `ICalendarRepository`, `IProductionOrderRepository`.
+- `ICatalogPort`: mocked adapter (HttpClient against a local stub or a static fixture — **not** against real MS2 yet).
+- `ResolveDailyCatalogJob` background job as an `IHostedService`/`BackgroundService` on a fixed schedule (e.g. daily cron) or a manual trigger for testing.
+- **DoD**: migration applies against real Postgres (via Aspire), repos persist and retrieve correctly against a real DB (integration test with Testcontainers or Aspire testing).
 
-### Etapa 5 — API layer
-- Minimal APIs o Controllers (definir preferencia), un endpoint por caso de uso de la sección 0.
-- Validación de input (FluentValidation o data annotations).
-- Manejo de errores de dominio → status codes HTTP correctos (409 para violación de regla 48h, 404 para calendario/día inexistente, 422 para transición inválida).
-- **DoD**: colección Postman/`.http` file con los 7 endpoints, cada uno probado manualmente contra datos seed.
+### Stage 5 — API layer
+- Minimal APIs or Controllers (preference to be decided), one endpoint per use case from section 0.
+- Input validation (FluentValidation or data annotations).
+- Domain errors → correct HTTP status codes (409 for a 48h rule violation, 404 for a missing calendar/day, 422 for an invalid transition).
+- **DoD**: a Postman collection/`.http` file with the 7 endpoints, each manually tested against seed data.
 
-### Etapa 6 — Datos mock / seed
-- Seed de datos de prueba: 2-3 pacientes, calendarios en distintos estados, para poder probar `active-tomorrow` sin depender de MS1/MS3 reales.
-- Fixture estático para `ICatalogPort` (respuestas hardcodeadas de recipe/portions).
-- **DoD**: `dotnet run` en AppHost deja el sistema con datos de prueba listos para demo.
+### Stage 6 — Mock/seed data
+- Seed test data: 2-3 patients, calendars in different states, so `active-tomorrow` can be tested without depending on real MS1/MS3.
+- Static fixture for `ICatalogPort` (hardcoded recipe/portions responses).
+- **DoD**: `dotnet run` on AppHost leaves the system with test data ready for a demo.
 
-### Etapa 7 — Tests de aceptación
-Verificar contra criterios ya definidos:
-- Calendario no se crea duplicado para el mismo contrato.
-- Cancelación rechazada si faltan <48h.
-- Reprogramación de fecha rechazada si faltan <48h.
-- `active-tomorrow` devuelve solo días en `ReadyForProduction` para la fecha de mañana.
-- `delivery-result` actualiza `DayStatus` correctamente y es idempotente (llamar dos veces con el mismo resultado no rompe estado).
-- **DoD**: suite de tests de aceptación (integración, contra Postgres real vía Aspire) en verde.
-
----
-
-## 3. Decisiones abiertas para el agente (resolver antes de codear, no asumir en silencio)
-
-1. MediatR vs handlers manuales para Application layer.
-2. Minimal APIs vs Controllers para MS4.Api.
-3. Mecanismo del job diario: `BackgroundService` con `Timer`/cron vs endpoint interno disparado manualmente en esta etapa (más simple para demo).
-4. Cómo se autentica el frontend/paciente contra estos endpoints en esta etapa (¿sin auth por ahora, dado que es solo mock?).
+### Stage 7 — Acceptance tests
+Verify against the already-defined criteria:
+- A calendar is not created twice for the same contract.
+- Cancellation is rejected if <48h remain.
+- Rescheduling a date is rejected if <48h remain.
+- `active-tomorrow` returns only days in `ReadyForProduction` for tomorrow's date.
+- `delivery-result` updates `DayStatus` correctly and is idempotent (calling it twice with the same result doesn't break state).
+- **DoD**: acceptance test suite (integration, against real Postgres via Aspire) passing.
 
 ---
 
-## 4. Fuera de alcance en esta etapa (ya acordado en fase de arquitectura)
-- Broker de mensajería real.
-- Autenticación servicio-a-servicio.
+## 3. Open decisions for the agent (resolve before coding, don't assume silently)
+
+1. MediatR vs. manual handlers for the Application layer.
+2. Minimal APIs vs. Controllers for MS4.Api.
+3. Daily job mechanism: `BackgroundService` with a `Timer`/cron vs. an internal endpoint triggered manually at this stage (simpler for a demo).
+4. How the frontend/patient authenticates against these endpoints at this stage (no auth for now, since it's a mock?).
+
+---
+
+## 4. Out of scope at this stage (already agreed during the architecture phase)
+- A real message broker.
+- Service-to-service authentication.
 - Outbox pattern.
-- Versionado de schema de eventos (no aplica: esta etapa usa REST síncrono, no eventos).
+- Event schema versioning (not applicable: this stage uses synchronous REST, not events).
 
 ---
 
-## 5. Estado actual de la implementación (para agentes — leer antes de tocar código)
+## 5. Current implementation status (for agents — read before touching code)
 
-Ver también [`README.md`](./README.md) (cómo correr/testear) y [`FLOWS.md`](./FLOWS.md) (todo caso de uso, comportamiento esperado, escenarios de error).
+See also [`README.md`](./README.md) (how to run/test) and [`FLOWS.md`](./FLOWS.md) (every use case, expected behavior, error scenarios).
 
-**Completado**: Etapa 0 (cleanup del template) → Etapa 5 (API layer). Pendiente: Etapa 6 (seed data), Etapa 7 (tests de aceptación end-to-end).
+**Done**: Stage 0 (template cleanup) → Stage 6 (seed data). Pending: Stage 7 (end-to-end acceptance tests).
 
-### Decisiones de §3 ya resueltas
-1. MediatR (no handlers manuales) — ya wireado en `Application/DependencyInjection.cs`.
-2. Minimal APIs vía patrón `IEndpointGroup` (`src/Web/Infrastructure/`), no Controllers.
-3. Job diario: **endpoint de trigger manual** (`POST /api/v1/calendars/resolve-daily-catalog`), no `BackgroundService`. No es parte del contrato público de §0 — es ops/demo.
-4. Sin auth en esta etapa — confirmado, Identity removido por completo en Etapa 0.
+### §3 decisions already resolved
+1. MediatR (not manual handlers) — already wired in `Application/DependencyInjection.cs`.
+2. Minimal APIs via the `IEndpointGroup` pattern (`src/Web/Infrastructure/`), not Controllers.
+3. Daily job: **manual trigger endpoint** (`POST /api/v1/calendars/resolve-daily-catalog`), no `BackgroundService`. Not part of the public §0 contract — it's ops/demo tooling.
+4. No auth at this stage — confirmed, Identity was fully removed in Stage 0.
 
-### Gotchas técnicos ya resueltos (no los repitas)
-- **EF Core owned-type constructor binding no soporta navegación anidada en el constructor.** `DeliveryAddress` anida `Coordinates` como parámetro de ctor — EF no puede bindear eso vía constructor binding. Solución aplicada: ctor privado sin parámetros + setters privados en `DeliveryAddress` (mismo patrón que las entidades). Si agregás otro VO que anide otro VO owned, vas a pisar el mismo problema.
-- **Misma instancia de un owned type en dos navigations del mismo entity rompe el change tracker de EF.** `ProductionOrderLine` tiene `Coordinates` tanto embebido en `Address` como duplicado top-level (requisito explícito de §1). Nunca reuses la referencia — siempre `new Coordinates(...)`, no `address.Coordinates`.
-- **`dotnet ef` tool debe matchear la versión de `Microsoft.EntityFrameworkCore.Design`** en `Directory.Packages.props`, si no tira `MSB4057`. Ver README §Database migrations.
-- **`ApplicationDbContextInitialiser` usa `MigrateAsync()`**, no `EnsureCreated` — ya hay migraciones reales committeadas (`src/Infrastructure/Data/Migrations/`).
-- **Enums en JSON**: configurado `JsonStringEnumConverter` global (`Web/DependencyInjection.cs`) — todo enum (`DayStatus`, `DeliveryResult`, etc.) serializa/deserializa como string, no int.
-- **`AddProblemDetails()` es obligatorio** junto con `AddExceptionHandler<ProblemDetailsExceptionHandler>()` — sin eso, cualquier excepción no reconocida por el handler custom rompe con un meta-exception feo en vez de devolver un 500 limpio.
+### Technical gotchas already solved (don't repeat them)
+- **EF Core owned-type constructor binding doesn't support a nested navigation as a constructor parameter.** `DeliveryAddress` nests `Coordinates` as a ctor param — EF can't bind that via constructor binding. Fix applied: a private parameterless ctor + private setters on `DeliveryAddress` (same pattern already used by entities). If you add another VO that nests another owned VO, you'll hit the same issue.
+- **The same owned-type instance in two navigations on the same entity breaks EF's change tracker.** `ProductionOrderLine` has `Coordinates` both embedded in `Address` and duplicated as a top-level field (an explicit §1 requirement). Never reuse the reference — always `new Coordinates(...)`, not `address.Coordinates`.
+- **The `dotnet ef` tool must match the `Microsoft.EntityFrameworkCore.Design` version** in `Directory.Packages.props`, or it throws `MSB4057`. See README's "Database migrations" section.
+- **`ApplicationDbContextInitialiser` uses `MigrateAsync()`**, not `EnsureCreated` — real migrations are already committed (`src/Infrastructure/Data/Migrations/`).
+- **Enums in JSON**: a global `JsonStringEnumConverter` is configured (`Web/DependencyInjection.cs`) — every enum (`DayStatus`, `DeliveryResult`, etc.) serializes/deserializes as a string, not an int.
+- **`AddProblemDetails()` is required** alongside `AddExceptionHandler<ProblemDetailsExceptionHandler>()` — without it, any exception the custom handler doesn't recognize breaks with an ugly meta-exception instead of a clean 500.
+- **EF-generated ids aren't populated until `SaveChangesAsync`.** `DeliveryDay.Id` is 0 until the owning `DeliveryCalendar` is saved. Building a `ProductionOrder` via `OrderConsolidationService.Consolidate` from an unsaved calendar bakes `ProductionOrderLine.DeliveryDayId = 0` into every line. Always save calendars first, then consolidate (see `ApplicationDbContextInitialiser.TrySeedAsync` for the two-phase save).
 
-### Mapeo de excepciones de dominio → HTTP (ya implementado en `ProblemDetailsExceptionHandler`)
+### Domain exception → HTTP mapping (already implemented in `ProblemDetailsExceptionHandler`)
 `ValidationException`→400, `NotFoundException`→404, `DeliveryWindowLockedException`→409, `InvalidDeliveryDayTransitionException`→422.
 
-### Dónde está cada cosa
-- Repos: `ICalendarRepository`/`IProductionOrderRepository` (puertos en Application) → `CalendarRepository`/`ProductionOrderRepository` (impl en `Infrastructure/Data/Repositories`), toman `ApplicationDbContext` concreto directo, no `IApplicationDbContext` (esa interfaz es solo `SaveChangesAsync`, el unit-of-work).
-- `ICatalogPort` mockeado: `Infrastructure/Catalog/MockCatalogPort.cs` — fixture determinística por `planId`+`date`, sin HTTP real.
-- Endpoints: `src/Web/Endpoints/Calendars.cs`, un solo `IEndpointGroup` con `RoutePrefix = "/api/v1"` cubriendo los 7 contratos de §0 + el trigger manual.
-- Colección de pruebas manuales: `src/Web/Web.http`.
+### Where things live
+- Repos: `ICalendarRepository`/`IProductionOrderRepository` (ports in Application) → `CalendarRepository`/`ProductionOrderRepository` (impl in `Infrastructure/Data/Repositories`), take the concrete `ApplicationDbContext` directly, not `IApplicationDbContext` (that interface is just the `SaveChangesAsync` unit-of-work).
+- Mocked `ICatalogPort`: `Infrastructure/Catalog/MockCatalogPort.cs` — deterministic fixture keyed by `planId`+`date`, no real HTTP call.
+- Endpoints: `src/Web/Endpoints/Calendars.cs`, a single `IEndpointGroup` with `RoutePrefix = "/api/v1"` covering the 7 §0 contracts + the manual trigger.
+- Manual test collection: `src/Web/Web.http`.
+- Seed data: `ApplicationDbContextInitialiser.TrySeedAsync` — 3 patients (fixed GUIDs `aaaaaaaa-...0001/2/3`) covering all `DayStatus` values except `InProduction`: Patient 1 all-`Pending`, Patient 2 has a `ReadyForProduction` day for tomorrow (pre-consolidated into a `ProductionOrder` so `active-tomorrow` has data immediately) plus a `Scheduled` day, Patient 3 has `Delivered`/`Failed`/`Cancelled` days. Guarded by `if (await _context.Calendars.AnyAsync()) return;` — only seeds an empty DB.

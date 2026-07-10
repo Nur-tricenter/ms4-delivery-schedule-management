@@ -93,6 +93,11 @@ state transition. See `FLOWS.md` for exact scenarios per endpoint.
 
 - `ICatalogPort` (outbound call to MS2) is mocked — `MockCatalogPort` returns deterministic fixture
   data, no real network call.
-- No seed data yet (Etapa 6) — use `src/Web/Web.http` to create a calendar, set an address, run the
-  catalog job, then query `active-tomorrow`.
+- Seed data loads automatically on first run against an empty database (`dotnet run --project
+  src/AppHost`, Development environment only): 3 patients with fixed GUIDs
+  (`aaaaaaaa-0000-0000-0000-000000000001/2/3`) covering `Pending`, `Scheduled`,
+  `ReadyForProduction`, `Delivered`, `Failed`, and `Cancelled` days. Patient 2's calendar has
+  tomorrow's day pre-consolidated into a `ProductionOrder`, so `GET
+  /calendars/active-tomorrow` returns data without running the catalog job first. Seeding is
+  skipped if the database already has any calendar.
 - No auth in this stage (confirmed decision, see `CLAUDE.md` §3.4).
