@@ -1,4 +1,4 @@
-namespace delivery_schedule_management.Web.Infrastructure;
+namespace delivery_schedule_management.Api.Infrastructure;
 
 /// <summary>
 /// Defines a group of related Minimal API endpoints.

@@ -11,6 +11,9 @@ public class FunctionalTestSetup
     private static WebApiFactory? _factory;
     private static DistributedApplication? _app;
 
+    internal static HttpClient CreateHttpClient() =>
+        (_factory ?? throw new InvalidOperationException("WebApiFactory not initialised.")).CreateClient();
+
     [OneTimeSetUp]
     public async Task OneTimeSetUp()
     {

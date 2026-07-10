@@ -152,11 +152,11 @@ Verify against the already-defined criteria:
 
 See also [`README.md`](./README.md) (how to run/test) and [`FLOWS.md`](./FLOWS.md) (every use case, expected behavior, error scenarios).
 
-**Done**: Stage 0 (template cleanup) → Stage 6 (seed data). Pending: Stage 7 (end-to-end acceptance tests).
+**Done**: Stage 0 (template cleanup) → Stage 7 (end-to-end acceptance tests). All 7 stages complete.
 
 ### §3 decisions already resolved
 1. MediatR (not manual handlers) — already wired in `Application/DependencyInjection.cs`.
-2. Minimal APIs via the `IEndpointGroup` pattern (`src/Web/Infrastructure/`), not Controllers.
+2. Minimal APIs via the `IEndpointGroup` pattern (`src/Api/Infrastructure/`), not Controllers.
 3. Daily job: **manual trigger endpoint** (`POST /api/v1/calendars/resolve-daily-catalog`), no `BackgroundService`. Not part of the public §0 contract — it's ops/demo tooling.
 4. No auth at this stage — confirmed, Identity was fully removed in Stage 0.
 
@@ -165,16 +165,32 @@ See also [`README.md`](./README.md) (how to run/test) and [`FLOWS.md`](./FLOWS.m
 - **The same owned-type instance in two navigations on the same entity breaks EF's change tracker.** `ProductionOrderLine` has `Coordinates` both embedded in `Address` and duplicated as a top-level field (an explicit §1 requirement). Never reuse the reference — always `new Coordinates(...)`, not `address.Coordinates`.
 - **The `dotnet ef` tool must match the `Microsoft.EntityFrameworkCore.Design` version** in `Directory.Packages.props`, or it throws `MSB4057`. See README's "Database migrations" section.
 - **`ApplicationDbContextInitialiser` uses `MigrateAsync()`**, not `EnsureCreated` — real migrations are already committed (`src/Infrastructure/Data/Migrations/`).
-- **Enums in JSON**: a global `JsonStringEnumConverter` is configured (`Web/DependencyInjection.cs`) — every enum (`DayStatus`, `DeliveryResult`, etc.) serializes/deserializes as a string, not an int.
+- **Enums in JSON**: a global `JsonStringEnumConverter` is configured (`Api/DependencyInjection.cs`) — every enum (`DayStatus`, `DeliveryResult`, etc.) serializes/deserializes as a string, not an int.
 - **`AddProblemDetails()` is required** alongside `AddExceptionHandler<ProblemDetailsExceptionHandler>()` — without it, any exception the custom handler doesn't recognize breaks with an ugly meta-exception instead of a clean 500.
 - **EF-generated ids aren't populated until `SaveChangesAsync`.** `DeliveryDay.Id` is 0 until the owning `DeliveryCalendar` is saved. Building a `ProductionOrder` via `OrderConsolidationService.Consolidate` from an unsaved calendar bakes `ProductionOrderLine.DeliveryDayId = 0` into every line. Always save calendars first, then consolidate (see `ApplicationDbContextInitialiser.TrySeedAsync` for the two-phase save).
 
 ### Domain exception → HTTP mapping (already implemented in `ProblemDetailsExceptionHandler`)
 `ValidationException`→400, `NotFoundException`→404, `DeliveryWindowLockedException`→409, `InvalidDeliveryDayTransitionException`→422.
 
+### Acceptance tests (Stage 7)
+Two complementary test files in `tests/Application.FunctionalTests/Calendars/`, both against a real
+Postgres instance (Aspire-orchestrated via `TestAppHost`, reset with Respawn between tests via
+`TestBase.SetUp`):
+- `CalendarAcceptanceTests.cs` — the 5 criteria from §2 Stage 7, sent through the MediatR pipeline
+  directly (`TestApp.SendAsync`), bypassing HTTP. Exceptions surface as CLR types (`Should.ThrowAsync<T>`).
+- `CalendarsEndpointsTests.cs` — same kind of scenarios but through `WebApiFactory.CreateClient()`
+  (real HTTP), asserting actual status codes and `ProblemDetails` bodies. This is what actually covers
+  the Stage 5 API layer (routing, DTO binding, `ProblemDetailsExceptionHandler` mapping, enum JSON) —
+  previously only manually verified via `Api.http`. Client-side `JsonSerializerOptions` must include
+  `JsonStringEnumConverter` to match the server's `ConfigureHttpJsonOptions`, or enum fields
+  (`DayStatus`, etc.) fail to deserialize.
+
+`IClock` is the real `SystemClock` in both (no override wired in `WebApiFactory`), so 48h-boundary
+cases use `DateTime.UtcNow`-relative dates rather than a fixed instant.
+
 ### Where things live
 - Repos: `ICalendarRepository`/`IProductionOrderRepository` (ports in Application) → `CalendarRepository`/`ProductionOrderRepository` (impl in `Infrastructure/Data/Repositories`), take the concrete `ApplicationDbContext` directly, not `IApplicationDbContext` (that interface is just the `SaveChangesAsync` unit-of-work).
 - Mocked `ICatalogPort`: `Infrastructure/Catalog/MockCatalogPort.cs` — deterministic fixture keyed by `planId`+`date`, no real HTTP call.
-- Endpoints: `src/Web/Endpoints/Calendars.cs`, a single `IEndpointGroup` with `RoutePrefix = "/api/v1"` covering the 7 §0 contracts + the manual trigger.
-- Manual test collection: `src/Web/Web.http`.
+- Endpoints: `src/Api/Endpoints/Calendars/`, one file per endpoint (partial `Calendars` class, `RoutePrefix = "/api/v1"`), split into `Commands/` and `Queries/` subfolders — mirrors the `src/Application/Calendars/Commands|Queries` layout. `Calendars.cs` at the folder root only holds the `IEndpointGroup.Map` route table; each handler + its request record lives in its own file under the matching subfolder (`Commands/CreateSchedule.cs`, `Queries/GetCalendar.cs`, etc.).
+- Manual test collection: `src/Api/Api.http`.
 - Seed data: `ApplicationDbContextInitialiser.TrySeedAsync` — 3 patients (fixed GUIDs `aaaaaaaa-...0001/2/3`) covering all `DayStatus` values except `InProduction`: Patient 1 all-`Pending`, Patient 2 has a `ReadyForProduction` day for tomorrow (pre-consolidated into a `ProductionOrder` so `active-tomorrow` has data immediately) plus a `Scheduled` day, Patient 3 has `Delivered`/`Failed`/`Cancelled` days. Guarded by `if (await _context.Calendars.AnyAsync()) return;` — only seeds an empty DB.

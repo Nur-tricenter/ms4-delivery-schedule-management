@@ -7,7 +7,7 @@ var databaseServer = builder
     .WithLifetime(ContainerLifetime.Persistent)
     .AddDatabase(Services.Database);
 
-builder.AddProject<Projects.Web>(Services.WebApi)
+builder.AddProject<Projects.Api>(Services.WebApi)
     .WithReference(databaseServer)
     .WaitFor(databaseServer)
     .WithExternalHttpEndpoints()

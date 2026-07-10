@@ -3,7 +3,7 @@ using delivery_schedule_management.Domain.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
-namespace delivery_schedule_management.Web.Infrastructure;
+namespace delivery_schedule_management.Api.Infrastructure;
 
 /// <summary>
 /// Converts well-known application/domain exceptions into RFC 9110-compliant <see cref="ProblemDetails"/>

@@ -25,15 +25,15 @@ src/
   Domain/          pure C# — aggregates, entities, value objects, domain services. No EF, no ASP.NET.
   Application/      MediatR commands/queries/handlers, ports (repository/clock/catalog interfaces), DTOs
   Infrastructure/   EF Core DbContext, entity configurations, repository implementations, mocked catalog adapter
-  Web/              Minimal API endpoints, exception -> ProblemDetails mapping
-  AppHost/           Aspire orchestration entry point (Postgres + Web)
+  Api/              Minimal API endpoints, exception -> ProblemDetails mapping
+  AppHost/           Aspire orchestration entry point (Postgres + Api)
   ServiceDefaults/   Aspire service defaults (health checks, telemetry, resilience)
   Shared/            cross-cutting constants (service/database names)
 tests/
   Domain.UnitTests/            domain rules (48h boundary, state transitions, calendar generation)
   Application.UnitTests/       handlers against in-memory fakes
   Infrastructure.IntegrationTests/  repositories against real Postgres (via Aspire testing)
-  Application.FunctionalTests/  end-to-end HTTP tests against real Postgres (scaffolded, not yet populated)
+  Application.FunctionalTests/  end-to-end acceptance tests (MediatR pipeline) against real Postgres
   TestAppHost/                  minimal Aspire host used by the two test projects above
 ```
 
@@ -44,8 +44,8 @@ dotnet run --project src/AppHost
 ```
 
 Opens the Aspire dashboard, starts a Postgres container, applies EF Core migrations, and starts the
-Web API. Find the API's Scalar reference (OpenAPI UI) from the dashboard's URL list for the `webapi`
-resource, or use `src/Web/Web.http` directly (VS Code REST Client / Visual Studio / Rider all run
+API. Find the API's Scalar reference (OpenAPI UI) from the dashboard's URL list for the `webapi`
+resource, or use `src/Api/Api.http` directly (VS Code REST Client / Visual Studio / Rider all run
 `.http` files).
 
 ## Test
@@ -55,6 +55,7 @@ dotnet test                                    # everything
 dotnet test tests/Domain.UnitTests             # fast, no external deps
 dotnet test tests/Application.UnitTests        # fast, no external deps
 dotnet test tests/Infrastructure.IntegrationTests  # spins up real Postgres via Aspire — slower, needs Docker
+dotnet test tests/Application.FunctionalTests      # acceptance tests, real Postgres via Aspire, needs Docker
 ```
 
 ## Database migrations
@@ -65,7 +66,7 @@ EF Core tooling needs to match the `Microsoft.EntityFrameworkCore.Design` packag
 
 ```bash
 # add a migration
-dotnet ef migrations add <Name> --project src/Infrastructure --startup-project src/Web --output-dir Data/Migrations
+dotnet ef migrations add <Name> --project src/Infrastructure --startup-project src/Api --output-dir Data/Migrations
 
 # migrations apply automatically on `dotnet run --project src/AppHost` in Development
 # (ApplicationDbContextInitialiser calls Database.MigrateAsync() on startup)

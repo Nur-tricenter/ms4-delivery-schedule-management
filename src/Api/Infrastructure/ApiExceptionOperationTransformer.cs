@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
 
-namespace delivery_schedule_management.Web.Infrastructure;
+namespace delivery_schedule_management.Api.Infrastructure;
 
 /// <summary>
 /// Adds standard error responses to every OpenAPI operation. A 400 Bad Request is added to all

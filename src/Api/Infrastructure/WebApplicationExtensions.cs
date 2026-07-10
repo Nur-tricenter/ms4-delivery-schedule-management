@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace delivery_schedule_management.Web.Infrastructure;
+namespace delivery_schedule_management.Api.Infrastructure;
 
 public static class WebApplicationExtensions
 {
