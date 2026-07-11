@@ -686,6 +686,26 @@ En total el proyecto cuenta con más de 60 pruebas automatizadas, todas en verde
 
 ---
 
+### Demostración en vivo con Postman
+
+Para mostrar el sistema funcionando en tiempo real, el proyecto incluye una colección de Postman completamente automatizada (`src/Api/MS4-Delivery-Calendar.postman_collection.json`) que ejecuta todos los flujos sin necesidad de cambiar ningún valor a mano. Los identificadores de paciente, contrato y plan se generan automáticamente al momento de ejecutar, y las fechas se calculan a partir de la fecha del día en que se corre la colección.
+
+La colección tiene cinco flujos organizados en orden de complejidad:
+
+**Flujo 1 — Camino feliz completo**: es el flujo principal de la demostración. En nueve pasos encadenados muestra el ciclo de vida completo de un día de entrega desde cero: se crea el calendario, se asigna una dirección, se activa el proceso de resolución de catálogo, se consulta la orden de producción resultante, se reprograma un día a una fecha futura, se cancela otro día, y finalmente se registra el resultado de la entrega. Cada respuesta alimenta automáticamente al siguiente paso: el `calendarId` que devuelve el primer request se usa en todos los demás sin que el usuario tenga que copiarlo.
+
+**Flujo 2 — Idempotencia**: llama dos veces a `POST /schedule` con el mismo `contractId` y verifica que el sistema devuelve el mismo `calendarId` sin crear un duplicado. Demuestra que el microservicio es seguro ante reintentos de red.
+
+**Flujo 3 — Regla de las 48 horas**: crea un calendario cuya primera entrega cae hoy mismo, y luego intenta cancelar y reprogramar ese día. Ambas operaciones deben devolver 409, demostrando que la ventana de bloqueo funciona correctamente.
+
+**Flujo 4 — Transiciones de estado inválidas**: muestra qué pasa cuando se intenta operar sobre un día en el estado equivocado. Cancela un día, y luego intenta asignarle una dirección, cancelarlo por segunda vez, y marcarlo como entregado siendo Pendiente. Las tres operaciones devuelven 422.
+
+**Flujo 5 — Errores de validación**: prueba los casos de error más básicos: duración inválida (7 en vez de 15 o 30) devuelve 400, un calendario inexistente devuelve 404, y coordenadas fuera de rango devuelven 400.
+
+Para ejecutar la demostración: importar el archivo en Postman, configurar la variable `baseUrl` con la URL que muestra el dashboard de Aspire para el recurso `webapi`, y usar el **Collection Runner** para correr todos los flujos en secuencia. Cada request muestra su resultado con aserciones en verde si el comportamiento es el esperado.
+
+---
+
 ### Estado actual y próximos pasos
 
 El microservicio está completamente implementado y probado en todas las capas. Las siete etapas de implementación planificadas originalmente están terminadas: scaffolding, modelo de dominio, capa de aplicación, infraestructura, endpoints de API, datos de prueba y pruebas de aceptación.
