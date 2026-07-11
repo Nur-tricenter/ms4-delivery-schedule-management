@@ -265,6 +265,88 @@ Returns `dayId` + final `status` (`Delivered` or `Failed`).
 
 ---
 
+## Business rules
+
+### 48-hour lock window
+A delivery day is **locked** once its scheduled date is less than 48 hours away. Any attempt to reschedule or cancel a locked day is rejected with a `409 Conflict`. The boundary is inclusive: exactly 48 hours remaining is not locked.
+
+### Calendar creation
+- A calendar always spans exactly **15 or 30 days** starting from `startDate`, one delivery day per day.
+- The `POST /schedule` endpoint is **idempotent by `contractId`**: calling it a second time with the same contract returns the existing calendar without creating a duplicate.
+
+### Delivery day statuses
+A day progresses through a strict one-way pipeline:
+
+```
+Pending → Scheduled → ReadyForProduction → Delivered
+                                         → Failed
+       ↘ (any stage before terminal) → Cancelled
+```
+
+| Status | Meaning |
+|---|---|
+| `Pending` | Day created, no address yet |
+| `Scheduled` | Address set — day is queued for catalog resolution |
+| `ReadyForProduction` | Recipe and portions resolved via MS2 catalog — day is in the production order |
+| `Delivered` | MS5 confirmed delivery with evidence |
+| `Failed` | MS5 reported a failed delivery attempt |
+| `Cancelled` | Patient or operator cancelled the delivery — **terminal, cannot be undone** |
+
+### Allowed operations per status
+
+| Operation | Allowed statuses | Locked <48h? |
+|---|---|---|
+| Set address | `Pending`, `Scheduled` | No lock (no time restriction) |
+| Reschedule date | `Pending`, `Scheduled` | Yes — rejected if <48h out |
+| Cancel | `Pending`, `Scheduled`, `ReadyForProduction` | Yes — rejected if <48h out |
+| Record delivery result | `ReadyForProduction`, `InProduction` | No lock |
+
+### Delivery results
+- Only **MS5** can move a day to `Delivered` or `Failed` — this cannot be done manually through any other endpoint.
+- Reporting the same result twice (e.g. `DELIVERED` → `DELIVERED`) is a **no-op** — the call succeeds and returns the current status unchanged.
+- Reporting a conflicting result (e.g. `DELIVERED` then `FAILED`) is rejected with `422`.
+
+### Catalog resolution
+The daily catalog job (`POST /calendars/resolve-daily-catalog`) must run **before** MS3 calls `GET /calendars/active-tomorrow` for a given date. Only days in `Scheduled` status receive recipe/portion data from MS2 and move to `ReadyForProduction`. Days without an address (`Pending`) are skipped silently. The job is idempotent — running it twice for the same date replaces the production order lines without creating duplicates.
+
+---
+
+## Service dependencies and inter-microservice communication
+
+### Who calls MS4
+
+| Caller | Endpoint | When |
+|---|---|---|
+| **MS3** (contracting) | `POST /api/v1/schedule` | After patient payment is confirmed — creates the delivery calendar |
+| **MS3** (contracting) | `GET /api/v1/calendars/active-tomorrow` | Daily — retrieves all addresses and plan IDs for next-day production planning |
+| **Frontend** (patient app) | `PUT /api/v1/calendars/{id}/dates` | Patient reschedules a delivery day |
+| **Frontend** (patient app) | `POST /api/v1/calendars/{id}/addresses` | Patient sets or updates a delivery address |
+| **Frontend** (patient app) | `POST /api/v1/calendars/{id}/cancel-day` | Patient cancels a delivery day |
+| **Frontend** (patient app) | `GET /api/v1/calendars/{id}` | Patient views their full calendar |
+| **MS5** (delivery) | `PATCH /api/v1/calendars/days/{dayId}/delivery-result` | Courier records delivery outcome with evidence |
+
+### What MS4 calls outbound
+
+| Dependency | Endpoint | Purpose | Current state |
+|---|---|---|---|
+| **MS2** (catalog) | `GET /catalog/plans/{id}/day/{date}` | Fetch recipe reference and portion count for a plan on a given date | **Mocked** — `MockCatalogPort` returns a deterministic fixture; no real HTTP call yet |
+
+### Known integration gaps (pending resolution upstream)
+
+1. **MS5 does not yet call MS4.** The master architecture table has no row showing MS5 calling `PATCH /delivery-result`. Until MS5 is wired to call this endpoint, every delivery day stays stuck in `ReadyForProduction` permanently and delivery outcomes are never recorded. This is a gap in MS5's implementation, not in MS4.
+
+2. **MS4 ↔ MS2 contract needs reconciliation before going live.** Three conflicting shapes exist:
+   - This service expects `GET /catalog/plans/{id}/day/{date}` (day-specific, returns recipe + portions).
+   - The master table describes a plain `GET /catalog/plans/{id}` (existence check only, no recipe data).
+   - MS3 uses a separate batch endpoint `POST /catalog/plans/structure` for recipe resolution.
+   The correct shape must be agreed with the MS2 team before replacing `MockCatalogPort` with a real HTTP adapter, or the daily catalog job will call a path that MS2 doesn't expose.
+
+3. **`GET /calendars/{id}` is absent from the master table.** All other frontend-read endpoints appear in it. Low risk since it has no cross-service dependency, but the master table should be updated for completeness.
+
+See `CLAUDE.md` §5 "Cross-service integration gaps" for the full audit details.
+
+---
+
 ## Notes for local dev
 
 - `ICatalogPort` (outbound call to MS2) is mocked — `MockCatalogPort` returns deterministic fixture

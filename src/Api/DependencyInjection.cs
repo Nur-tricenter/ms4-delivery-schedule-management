@@ -29,6 +29,7 @@ public static class DependencyInjection
 
         builder.Services.AddOpenApi(options =>
         {
+            options.AddDocumentTransformer<DocumentInfoTransformer>();
             options.AddOperationTransformer<ApiExceptionOperationTransformer>();
         });
     }

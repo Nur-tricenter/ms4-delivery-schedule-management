@@ -5,6 +5,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 var databaseServer = builder
     .AddPostgres(Services.DatabaseServer)
     .WithLifetime(ContainerLifetime.Persistent)
+    .WithPgAdmin()
     .AddDatabase(Services.Database);
 
 builder.AddProject<Projects.Api>(Services.WebApi)
