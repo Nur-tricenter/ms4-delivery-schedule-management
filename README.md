@@ -90,6 +90,181 @@ All 7 contract endpoints from `CLAUDE.md` §0, plus one internal/ops endpoint, u
 Error mapping: `400` validation, `404` not found, `409` 48h lock window violation, `422` invalid
 state transition. See `FLOWS.md` for exact scenarios per endpoint.
 
+## Scalar walkthrough — testing the flow end-to-end
+
+Open Scalar at the URL shown in the Aspire dashboard for the `webapi` resource (path: `/scalar/v1`).
+All endpoints are listed under the **Calendars** tag and numbered `[Step 1]`–`[Step 8]` to guide test order.
+
+Today's date in the examples below: `2026-07-11` — adjust dates to match your run.
+
+---
+
+### Step 1 — Create a delivery calendar
+
+`POST /api/v1/schedule`
+
+```json
+{
+  "contractId": "11111111-0000-0000-0000-000000000001",
+  "patientId":  "22222222-0000-0000-0000-000000000001",
+  "planId":     "33333333-0000-0000-0000-000000000001",
+  "duration":   15,
+  "startDate":  "2026-07-12"
+}
+```
+
+Returns `calendarId` (integer) + 15 days, all `Pending`. **Copy `calendarId` and one `dayId`** — every later step needs them.
+
+| Scenario | What to do | Expected |
+|----------|-----------|----------|
+| Happy path | Send the request above | 200 — `calendarId` + day list |
+| Idempotent retry | Send again with the **same `contractId`** | 200 — same calendar returned, no duplicate created |
+| Invalid duration | Change `"duration"` to `7` | 400 — `FluentValidation` error |
+
+---
+
+### Step 2 — Inspect the calendar
+
+`GET /api/v1/calendars/{id}` — use `calendarId` from Step 1.
+
+Returns the full calendar with all days and their current `Pending` status. Find the day whose `date` is `2026-07-12` (tomorrow) — **note its `dayId`** for Steps 3–4.
+
+| Scenario | What to do | Expected |
+|----------|-----------|----------|
+| Happy path | Use `calendarId` from Step 1 | 200 — all days `Pending` |
+| Not found | Use a non-existent ID (e.g. `9999`) | 404 |
+
+---
+
+### Step 3 — Set a delivery address for a day
+
+`POST /api/v1/calendars/{calendarId}/addresses`
+
+Use the `dayId` for tomorrow's day from Step 2 so that Step 4 can resolve it.
+
+```json
+{
+  "dayId":     <dayId from Step 2 — the one dated 2026-07-12>,
+  "street":    "Av. Javier Prado 123",
+  "city":      "Lima",
+  "latitude":  -12.0833,
+  "longitude": -77.0167
+}
+```
+
+Day status moves `Pending → Scheduled`. Returns `dayId` + address.
+
+| Scenario | What to do | Expected |
+|----------|-----------|----------|
+| Happy path | Payload above | 200 — day is now `Scheduled` |
+| Update address | Call again with a different street | 200 — address overwritten, still `Scheduled` |
+| Invalid coordinates | Set `latitude` to `200` | 400 — validation error |
+| Wrong state | Use a `dayId` that is already `Delivered` or `Cancelled` (see seed Patient 3) | 422 |
+
+---
+
+### Step 4 — Run daily catalog resolution (ops trigger)
+
+`POST /api/v1/calendars/resolve-daily-catalog` — no body required.
+
+Finds all `Scheduled` days dated tomorrow, calls `ICatalogPort` (mocked — deterministic fixture), sets `RecipeRef`/`Portions`, moves each day to `ReadyForProduction`, and rebuilds the `ProductionOrder` for that date.
+
+Add `?date=2026-07-12` as a query param to target a specific date (default is tomorrow).
+
+Returns **204 No Content**.
+
+| Scenario | What to do | Expected |
+|----------|-----------|----------|
+| Happy path | Call with no params | 204 — tomorrow's Scheduled days → ReadyForProduction |
+| Re-run | Call again for the same date | 204 — idempotent, existing order's lines replaced, no duplicate |
+| Specific date | Add `?date=2026-07-15` | 204 — resolves that date instead of tomorrow |
+
+---
+
+### Step 5 — Get tomorrow's production order
+
+`GET /api/v1/calendars/active-tomorrow`
+
+Returns all `ReadyForProduction` days for tomorrow, mapped to `{ packId, patientId, planId, hour, address, lat, long }`. Step 4 must have run first or this returns an empty list.
+
+Add `?date=2026-07-12` to query a specific date.
+
+| Scenario | What to do | Expected |
+|----------|-----------|----------|
+| After Steps 1–4 | Call with no params | 200 — the day from Step 3 appears |
+| Before Step 4 (fresh run with seed data) | Skip Steps 1–4, call immediately | 200 — seed Patient 2 has a pre-resolved day for tomorrow |
+| No resolved days | Target a date that had no `Scheduled` days | 200 — empty list (not 404) |
+
+---
+
+### Step 6 — Reschedule a delivery day
+
+`PUT /api/v1/calendars/{calendarId}/dates`
+
+```json
+{
+  "dayId":   <dayId of a Pending or Scheduled day with date > 48h from now>,
+  "newDate": "2026-08-01"
+}
+```
+
+Returns `dayId` + `status` (unchanged — rescheduling doesn't change status).
+
+| Scenario | What to do | Expected |
+|----------|-----------|----------|
+| Happy path | Use a day dated far in the future | 200 |
+| 48h lock | Use a day whose **current** date is `2026-07-12` (less than 48h away) | 409 |
+| Wrong state | Use a day in `ReadyForProduction` or `Delivered` | 422 |
+
+---
+
+### Step 7 — Cancel a delivery day
+
+`POST /api/v1/calendars/{calendarId}/cancel-day`
+
+```json
+{
+  "dayId": <dayId of a Pending or Scheduled day with date > 48h from now>
+}
+```
+
+Day moves to `Cancelled` (terminal — cannot be undone).
+
+| Scenario | What to do | Expected |
+|----------|-----------|----------|
+| Happy path | Day dated far in the future | 200 — `Cancelled` |
+| 48h lock | Day dated tomorrow (`2026-07-12`) | 409 |
+| Already cancelled | Call twice on the same day | 422 on second call |
+| Terminal state | Use a `Delivered` or `Failed` day | 422 |
+
+---
+
+### Step 8 — Record delivery result (MS5 callback)
+
+`PATCH /api/v1/calendars/days/{dayId}/delivery-result`
+
+Day must be `ReadyForProduction` or `InProduction`. Use the `dayId` that went through Steps 3–4, or grab the pre-resolved day from seed Patient 2.
+
+```json
+{
+  "result":       "DELIVERED",
+  "photoUrl":     "https://example.com/evidence.jpg",
+  "signatureUrl": null
+}
+```
+
+Returns `dayId` + final `status` (`Delivered` or `Failed`).
+
+| Scenario | What to do | Expected |
+|----------|-----------|----------|
+| Delivered | `"result": "DELIVERED"` | 200 — day is `Delivered` |
+| Failed | `"result": "FAILED"` | 200 — day is `Failed` |
+| Idempotent retry | Call twice with the **same** `result` | 200 both times — no error |
+| Conflicting retry | Call with `DELIVERED`, then call again with `FAILED` | 200 then **422** |
+| Wrong state | Use a `Pending` or `Cancelled` day | 422 |
+
+---
+
 ## Notes for local dev
 
 - `ICatalogPort` (outbound call to MS2) is mocked — `MockCatalogPort` returns deterministic fixture

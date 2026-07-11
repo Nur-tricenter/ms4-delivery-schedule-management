@@ -30,7 +30,7 @@ public class ResolveDailyCatalogCommandHandler(
 
         foreach (var calendar in calendars)
         {
-            var day = calendar.Days.SingleOrDefault(d => d.Date == deliveryDate && d.Status == DayStatus.Scheduled);
+            var day = calendar.Days.FirstOrDefault(d => d.Date == deliveryDate && d.Status == DayStatus.Scheduled);
             if (day is null)
             {
                 continue;
