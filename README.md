@@ -41,8 +41,6 @@ tests/
 
 ```mermaid
 classDiagram
-    direction TB
-
     class DeliveryCalendar {
         +int Id
         +Guid PatientId
@@ -224,7 +222,7 @@ flowchart TD
 
     MS3 -->|"1 create calendar"| DC
     FE  -->|"2 address / reschedule / cancel"| DD
-    DD  -->|"3 daily job: Scheduled → ReadyForProduction"| OCS
+    DD  -->|"3 daily job: Scheduled -> ReadyForProduction"| OCS
     OCS -->|"4 build order"| PO
     MS3 -->|"5 read order"| PO
     MS5 -->|"6 record result"| DD
