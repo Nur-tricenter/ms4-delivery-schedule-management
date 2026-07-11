@@ -37,6 +37,208 @@ tests/
   TestAppHost/                  minimal Aspire host used by the two test projects above
 ```
 
+## Class diagram
+
+```mermaid
+classDiagram
+    direction TB
+
+    class DeliveryCalendar {
+        +int Id
+        +Guid PatientId
+        +ContractReference ContractId
+        +PlanReference PlanId
+        +PlanDuration Duration
+        +DeliveryDate StartDate
+        +CalendarStatus Status
+        +Create(patientId, contractId, planId, duration, startDate)$
+    }
+
+    class DeliveryDay {
+        +int Id
+        +DeliveryDate Date
+        +DayStatus Status
+        +DeliveryAddress Address
+        +DeliveryEvidence Evidence
+        +RecipeReference RecipeRef
+        +PortionQuantity Portions
+        +SetAddress(address)
+        +MarkReadyForProduction(recipeRef, portions)
+        +Reschedule(newDate, now)
+        +Cancel(now)
+        +ApplyDeliveryResult(result, evidence, now)
+    }
+
+    class ProductionOrder {
+        +int Id
+        +DeliveryDate ProductionDate
+        +DeliveryDate DeliveryDate
+        +DateTimeOffset GeneratedAt
+        +ProductionOrderStatus Status
+        +Create(deliveryDate, lines, generatedAt)$
+        +ReplaceLines(lines, regeneratedAt)
+    }
+
+    class ProductionOrderLine {
+        +int Id
+        +int DeliveryDayId
+        +Guid PatientId
+        +DeliveryAddress Address
+        +Coordinates Coordinates
+        +PlanReference PlanRef
+        +TimeOnly Hour
+    }
+
+    class DeliveryAddress {
+        <<ValueObject>>
+        +string Street
+        +string City
+        +string References
+        +string Notes
+        +Coordinates Coordinates
+    }
+
+    class Coordinates {
+        <<ValueObject>>
+        +double Latitude
+        +double Longitude
+    }
+
+    class DeliveryEvidence {
+        <<ValueObject>>
+        +DateTimeOffset RecordedAt
+        +string PhotoUrl
+        +string SignatureUrl
+    }
+
+    class DayStatus {
+        <<enumeration>>
+        Pending
+        Scheduled
+        ReadyForProduction
+        InProduction
+        Delivered
+        Failed
+        Cancelled
+    }
+
+    class CalendarStatus {
+        <<enumeration>>
+        Active
+        Completed
+    }
+
+    class ProductionOrderStatus {
+        <<enumeration>>
+        Generated
+    }
+
+    class OrderConsolidationService {
+        <<DomainService>>
+        +Consolidate(calendars, date, existingOrder, generatedAt)$
+    }
+
+    class ICalendarRepository {
+        <<interface>>
+        +GetByIdAsync(id, ct)
+        +GetByContractIdAsync(contractId, ct)
+        +GetByDeliveryDayIdAsync(dayId, ct)
+        +GetActiveForDeliveryDateAsync(date, ct)
+        +Add(calendar)
+    }
+
+    class IProductionOrderRepository {
+        <<interface>>
+        +GetByDeliveryDateAsync(date, ct)
+        +Add(order)
+    }
+
+    class ICatalogPort {
+        <<interface>>
+        +GetDayResolutionAsync(planId, date, ct)
+    }
+
+    class IClock {
+        <<interface>>
+        +DateTimeOffset Now
+    }
+
+    DeliveryCalendar "1" *-- "1..*" DeliveryDay : Days
+    ProductionOrder "1" *-- "0..*" ProductionOrderLine : Lines
+    DeliveryDay --> DeliveryAddress : address
+    DeliveryDay --> DeliveryEvidence : evidence
+    DeliveryDay --> DayStatus : status
+    DeliveryCalendar --> CalendarStatus : status
+    ProductionOrder --> ProductionOrderStatus : status
+    ProductionOrderLine --> DeliveryAddress : address
+    ProductionOrderLine --> Coordinates : coordinates
+    DeliveryAddress *-- Coordinates : embedded
+    ICalendarRepository ..> DeliveryCalendar : manages
+    IProductionOrderRepository ..> ProductionOrder : manages
+    OrderConsolidationService ..> DeliveryCalendar : reads
+    OrderConsolidationService ..> ProductionOrder : produces
+```
+
+## Domain architecture
+
+```mermaid
+flowchart TD
+    subgraph EXT["External Actors"]
+        MS3["MS3 — Scheduling Engine\nPOST /schedule · GET /active-tomorrow"]
+        FE["Frontend — Patient App\nSet address · Reschedule · Cancel"]
+        MS5["MS5 — Delivery Agent\nPATCH /delivery-result"]
+    end
+
+    subgraph AGG1["Aggregate: DeliveryCalendar"]
+        DC["DeliveryCalendar (root)"]
+        DD["DeliveryDay"]
+        DA["DeliveryAddress (VO)\nCoordinates (VO)"]
+        DEV["DeliveryEvidence (VO)"]
+        DC --> DD
+        DD --- DA
+        DD --- DEV
+    end
+
+    subgraph SVC["Domain Service"]
+        OCS["OrderConsolidationService\nBuilds ProductionOrder from\nReadyForProduction days"]
+    end
+
+    subgraph AGG2["Aggregate: ProductionOrder"]
+        PO["ProductionOrder (root)"]
+        POL["ProductionOrderLine\nCoordinates (VO)"]
+        PO --> POL
+    end
+
+    subgraph PORTS["Application Ports"]
+        ICALR["ICalendarRepository"]
+        IPOR["IProductionOrderRepository"]
+        ICP["ICatalogPort"]
+        ICL["IClock — 48h rule checks"]
+    end
+
+    subgraph INFRA["Infrastructure"]
+        DB[("Postgres")]
+        MOCK["MockCatalogPort\ndeterministic fixture"]
+        MS2["MS2 — Catalog\nfuture real HTTP"]
+    end
+
+    MS3 -->|"1 create calendar"| DC
+    FE  -->|"2 address / reschedule / cancel"| DD
+    DD  -->|"3 daily job: Scheduled → ReadyForProduction"| OCS
+    OCS -->|"4 build order"| PO
+    MS3 -->|"5 read order"| PO
+    MS5 -->|"6 record result"| DD
+
+    ICALR <-->|persists| AGG1
+    IPOR  <-->|persists| AGG2
+    ICALR --- DB
+    IPOR  --- DB
+
+    ICP --> MOCK
+    MOCK -.->|not yet wired| MS2
+    ICL  -.->|"injects now"| DD
+```
+
 ## Run
 
 ```bash
@@ -359,3 +561,133 @@ See `CLAUDE.md` §5 "Cross-service integration gaps" for the full audit details.
   /calendars/active-tomorrow` returns data without running the catalog job first. Seeding is
   skipped if the database already has any calendar.
 - No auth in this stage (confirmed decision, see `CLAUDE.md` §3.4).
+
+---
+
+## Presentación del microservicio (español)
+
+> Texto pensado para ser leído en voz alta al presentar el proyecto. Sigue el orden lógico del sistema: contexto → dominio → flujo → reglas → endpoints → arquitectura → pruebas → pendientes.
+
+---
+
+### Contexto general
+
+Este proyecto forma parte de un sistema más grande compuesto por cinco microservicios —MS1 al MS5— que en conjunto gestionan el ciclo completo de atención a pacientes que reciben alimentación a domicilio: desde el registro del paciente y la selección del plan nutricional, pasando por la contratación y el pago, hasta la producción diaria de los alimentos y la entrega en el domicilio del paciente.
+
+Dentro de ese sistema, **MS4 es el Microservicio de Calendario de Entregas**. Su única responsabilidad es crear, gestionar y hacer seguimiento de los calendarios de entrega de cada paciente: saber qué días hay que entregar, a qué dirección, qué receta corresponde, y qué pasó con cada entrega una vez que el repartidor la realizó.
+
+---
+
+### ¿Qué problema resuelve?
+
+Cuando un paciente contrata un plan nutricional a través de MS3, lo que en realidad está comprando es una secuencia de entregas diarias: 15 o 30 días de alimentación, uno por día. MS4 es quien materializa esa promesa como un calendario concreto con fechas, estados y direcciones. Sin MS4, nadie sabe cuándo hay que entregar, dónde hay que ir ni si esa entrega ya ocurrió o falló.
+
+---
+
+### El modelo de dominio
+
+El núcleo del sistema gira en torno a dos conceptos principales:
+
+**El Calendario de Entregas** (`DeliveryCalendar`) es el objeto raíz. Pertenece a un paciente, está asociado a un contrato y a un plan nutricional de MS2, tiene una duración de 15 o 30 días, y contiene una lista de días de entrega.
+
+**El Día de Entrega** (`DeliveryDay`) representa una entrega individual. Cada día tiene una fecha, un estado, y puede tener una dirección, una receta asignada, y evidencia de entrega. El día es la unidad mínima sobre la que se operan las acciones del paciente y del repartidor.
+
+Existe también una **Orden de Producción** (`ProductionOrder`), que es una instantánea consolidada de todos los días listos para el día siguiente. Es lo que MS3 consulta para saber qué hay que cocinar y preparar.
+
+---
+
+### El ciclo de vida de un día de entrega
+
+Un día de entrega pasa por los siguientes estados, en orden:
+
+1. **Pending** — el día fue creado pero el paciente aún no ha puesto una dirección de entrega.
+2. **Scheduled** — el paciente registró su dirección. El día ya tiene destino.
+3. **ReadyForProduction** — un proceso diario consultó el catálogo de MS2 y asignó la receta y las porciones correspondientes. El día está incluido en la orden de producción.
+4. **Delivered** o **Failed** — el repartidor (a través de MS5) confirmó el resultado de la entrega, con o sin evidencia fotográfica.
+5. **Cancelled** — en cualquier momento antes de que la entrega ocurra, el paciente o el operador puede cancelar el día. Una vez cancelado, no hay vuelta atrás.
+
+Este flujo es unidireccional y estricto: el sistema rechaza cualquier operación que intente saltarse un paso o revertir un estado terminal.
+
+---
+
+### Las reglas de negocio más importantes
+
+**Regla de las 48 horas:** un día de entrega queda "bloqueado" en cuanto faltan menos de 48 horas para su fecha. A partir de ese momento, no se puede reprogramar ni cancelar. Si alguien intenta hacerlo, el sistema responde con un error 409. Esta regla existe para proteger la cadena de producción: una vez que el equipo de cocina ya comenzó a preparar los alimentos para el día siguiente, no es posible cambiar la dirección o cancelar sin afectar la operación.
+
+**Idempotencia en la creación:** si MS3 llama dos veces a crear un calendario para el mismo contrato —por ejemplo por un reintento de red— el sistema devuelve el calendario ya existente sin crear uno duplicado. Esto protege la integridad de los datos ante fallos de comunicación entre servicios.
+
+**Solo MS5 puede cerrar el ciclo:** un día de entrega únicamente puede pasar a estado Entregado o Fallido a través del endpoint que MS5 llama cuando el repartidor registra el resultado. Ningún otro actor puede forzar ese cambio manualmente. Esto garantiza que el estado del sistema siempre refleja lo que realmente ocurrió en campo.
+
+**Idempotencia en el resultado:** si MS5 reporta el mismo resultado dos veces para el mismo día —cosa que puede pasar por reintentos— la segunda llamada es un no-operación: el sistema acepta la solicitud, devuelve el estado actual y no produce ningún error ni cambio de estado. Si en cambio MS5 intenta reportar un resultado contradictorio (por ejemplo, primero "entregado" y luego "fallido"), el sistema lo rechaza con un 422.
+
+---
+
+### Los siete endpoints
+
+El microservicio expone exactamente siete endpoints públicos, más uno interno para operaciones:
+
+**Endpoint 1 — Crear el calendario** (`POST /api/v1/schedule`): lo llama MS3 justo después de confirmar el pago del paciente. Recibe el ID del contrato, del paciente, del plan nutricional, la duración (15 o 30 días) y la fecha de inicio. Devuelve el ID del calendario y la lista de días vacíos, todos en estado Pending.
+
+**Endpoint 2 — Consultar el calendario** (`GET /api/v1/calendars/{id}`): lo usa el frontend de la aplicación del paciente para mostrar su calendario completo con todos los días y sus estados.
+
+**Endpoint 3 — Registrar dirección** (`POST /api/v1/calendars/{id}/addresses`): el paciente indica a qué dirección debe llegar su entrega ese día. Al hacerlo, el día pasa de Pending a Scheduled.
+
+**Endpoint 4 — Reprogramar un día** (`PUT /api/v1/calendars/{id}/dates`): el paciente puede mover la fecha de una entrega a otro día, siempre que falten más de 48 horas. El estado del día no cambia, solo la fecha.
+
+**Endpoint 5 — Cancelar un día** (`POST /api/v1/calendars/{id}/cancel-day`): el paciente cancela una entrega específica. Aplica la regla de las 48 horas. La cancelación es terminal.
+
+**Endpoint 6 — Orden activa para mañana** (`GET /api/v1/calendars/active-tomorrow`): lo llama MS3 diariamente para obtener la lista consolidada de todas las entregas del día siguiente que ya están listas para producción. Devuelve dirección, coordenadas, ID de plan y hora por cada línea, y es lo que desencadena la planificación de cocina.
+
+**Endpoint 7 — Registrar resultado de entrega** (`PATCH /api/v1/calendars/days/{dayId}/delivery-result`): lo llama MS5 cuando el repartidor termina una entrega, indicando si fue exitosa o fallida y adjuntando la evidencia fotográfica o de firma. Cierra el ciclo del día.
+
+Además existe un endpoint interno (`POST /api/v1/calendars/resolve-daily-catalog`) que activa manualmente el proceso de resolución de catálogo: consulta a MS2 para obtener la receta y las porciones de cada día programado para mañana, y construye la orden de producción. En un sistema en producción esto correría de forma automática cada noche; en esta etapa se activa a mano para facilitar las pruebas.
+
+---
+
+### Comunicación con otros microservicios
+
+MS4 recibe llamadas de tres fuentes: de **MS3** para crear calendarios y consultar la orden del día siguiente, del **frontend del paciente** para gestionar direcciones, reprogramaciones y cancelaciones, y de **MS5** para registrar resultados de entrega.
+
+En sentido saliente, MS4 depende de **MS2** (el catálogo de planes) para obtener la receta y las porciones que corresponden a cada plan nutricional en una fecha dada. En esta etapa esa dependencia está simulada mediante un adaptador de prueba (`MockCatalogPort`) que devuelve datos fijos sin hacer ninguna llamada de red real. Antes de salir a producción, ese adaptador deberá reemplazarse por uno que llame al endpoint real de MS2, y el contrato exacto de esa llamada deberá acordarse con el equipo de MS2 porque actualmente existen tres versiones distintas en la documentación del sistema.
+
+También vale la pena mencionar una brecha pendiente: MS5 aún no está implementado para llamar al endpoint de resultado de entrega de MS4. Hasta que eso ocurra, los días quedan en estado ReadyForProduction indefinidamente y el ciclo nunca se cierra. La solución está del lado de MS5, no de MS4.
+
+---
+
+### Arquitectura técnica
+
+El microservicio está construido con **.NET 10** y usa **.NET Aspire** para orquestar el contenedor de base de datos y exponer el dashboard de observabilidad. Sigue el patrón de **Clean Architecture** en cuatro capas:
+
+- **Domain**: el corazón del sistema. Contiene los agregados, entidades, objetos de valor y servicios de dominio. No tiene dependencias externas: ni base de datos, ni HTTP, ni nada del framework. Aquí viven todas las reglas de negocio, incluyendo la regla de las 48 horas, los cambios de estado y las validaciones de los objetos de valor.
+
+- **Application**: define los casos de uso como comandos y consultas usando el patrón CQRS a través de MediatR. También define las interfaces (puertos) que la capa de infraestructura debe implementar: el repositorio de calendarios, el repositorio de órdenes de producción, el adaptador del catálogo y el reloj del sistema.
+
+- **Infrastructure**: implementa esos puertos usando Entity Framework Core contra PostgreSQL, incluyendo las migraciones de base de datos, los repositorios concretos y el adaptador simulado de MS2.
+
+- **Api**: expone los endpoints como Minimal APIs de ASP.NET Core. Convierte los errores de dominio en respuestas HTTP semánticas: 400 para validación, 404 para recursos no encontrados, 409 para la regla de las 48 horas y 422 para transiciones de estado inválidas.
+
+La base de datos es **PostgreSQL**, gestionada completamente a través de contenedores Docker por Aspire. La interfaz de exploración de la API es **Scalar** (equivalente moderno de Swagger), accesible desde el dashboard de Aspire.
+
+---
+
+### Pruebas
+
+El proyecto tiene cuatro niveles de pruebas:
+
+**Pruebas unitarias de dominio**: verifican las reglas de negocio puras —el caso exacto de frontera de las 48 horas, las transiciones de estado válidas e inválidas, la generación correcta de los días del calendario según la duración— sin ninguna dependencia externa.
+
+**Pruebas unitarias de aplicación**: prueban cada handler de comando y consulta usando repositorios y adaptadores en memoria. Verifican que la lógica de orquestación es correcta sin tocar la base de datos.
+
+**Pruebas de integración de infraestructura**: levantan un contenedor real de PostgreSQL a través de Aspire y verifican que los repositorios persisten y recuperan datos correctamente contra una base de datos real.
+
+**Pruebas funcionales de aceptación**: pruebas de extremo a extremo que verifican los siete criterios de aceptación del sistema —idempotencia de creación, regla de las 48 horas para cancelación y reprogramación, consulta de días activos para mañana, idempotencia del resultado de entrega— tanto a través del pipeline de MediatR directamente como a través de HTTP real, incluyendo la verificación de códigos de estado y cuerpos de error.
+
+En total el proyecto cuenta con más de 60 pruebas automatizadas, todas en verde.
+
+---
+
+### Estado actual y próximos pasos
+
+El microservicio está completamente implementado y probado en todas las capas. Las siete etapas de implementación planificadas originalmente están terminadas: scaffolding, modelo de dominio, capa de aplicación, infraestructura, endpoints de API, datos de prueba y pruebas de aceptación.
+
+Los pendientes no son defectos de MS4 sino decisiones de integración que dependen de otros equipos: la conexión real con MS2 para resolver recetas, la implementación en MS5 de la llamada al endpoint de resultado de entrega, y la alineación de la tabla maestra de endpoints del sistema para que refleje correctamente todas las interacciones existentes.
