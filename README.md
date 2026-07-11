@@ -622,23 +622,168 @@ Este flujo es unidireccional y estricto: el sistema rechaza cualquier operación
 
 ### Los siete endpoints
 
-El microservicio expone exactamente siete endpoints públicos, más uno interno para operaciones:
+El microservicio expone exactamente siete endpoints públicos, más uno interno para operaciones. Cada endpoint tiene un propósito único y un único actor que lo llama — no hay endpoints genéricos ni multipropósito.
 
-**Endpoint 1 — Crear el calendario** (`POST /api/v1/schedule`): lo llama MS3 justo después de confirmar el pago del paciente. Recibe el ID del contrato, del paciente, del plan nutricional, la duración (15 o 30 días) y la fecha de inicio. Devuelve el ID del calendario y la lista de días vacíos, todos en estado Pending.
+---
 
-**Endpoint 2 — Consultar el calendario** (`GET /api/v1/calendars/{id}`): lo usa el frontend de la aplicación del paciente para mostrar su calendario completo con todos los días y sus estados.
+#### Endpoint 1 — Crear el calendario
+`POST /api/v1/schedule` · Caller: **MS3**
 
-**Endpoint 3 — Registrar dirección** (`POST /api/v1/calendars/{id}/addresses`): el paciente indica a qué dirección debe llegar su entrega ese día. Al hacerlo, el día pasa de Pending a Scheduled.
+Es el punto de entrada de todo el sistema. MS3 lo llama inmediatamente después de confirmar el pago del paciente.
 
-**Endpoint 4 — Reprogramar un día** (`PUT /api/v1/calendars/{id}/dates`): el paciente puede mover la fecha de una entrega a otro día, siempre que falten más de 48 horas. El estado del día no cambia, solo la fecha.
+**Recibe:**
+```json
+{
+  "contractId": "uuid del contrato",
+  "patientId":  "uuid del paciente",
+  "planId":     "uuid del plan nutricional en MS2",
+  "duration":   15,
+  "startDate":  "2026-08-01"
+}
+```
 
-**Endpoint 5 — Cancelar un día** (`POST /api/v1/calendars/{id}/cancel-day`): el paciente cancela una entrega específica. Aplica la regla de las 48 horas. La cancelación es terminal.
+**Devuelve:** el `calendarId` (entero) más la lista completa de días generados, todos en estado `Pending`. Si la duración es 15, devuelve 15 días; si es 30, devuelve 30.
 
-**Endpoint 6 — Orden activa para mañana** (`GET /api/v1/calendars/active-tomorrow`): lo llama MS3 diariamente para obtener la lista consolidada de todas las entregas del día siguiente que ya están listas para producción. Devuelve dirección, coordenadas, ID de plan y hora por cada línea, y es lo que desencadena la planificación de cocina.
+**Comportamiento especial — idempotencia:** si MS3 llama dos veces con el mismo `contractId` (reintento por fallo de red, por ejemplo), el sistema detecta que ya existe un calendario para ese contrato y devuelve el existente sin crear un duplicado. Mismo resultado, sin efectos secundarios.
 
-**Endpoint 7 — Registrar resultado de entrega** (`PATCH /api/v1/calendars/days/{dayId}/delivery-result`): lo llama MS5 cuando el repartidor termina una entrega, indicando si fue exitosa o fallida y adjuntando la evidencia fotográfica o de firma. Cierra el ciclo del día.
+**Errores posibles:** `400` si la duración no es 15 ni 30, o si algún ID viene vacío.
 
-Además existe un endpoint interno (`POST /api/v1/calendars/resolve-daily-catalog`) que activa manualmente el proceso de resolución de catálogo: consulta a MS2 para obtener la receta y las porciones de cada día programado para mañana, y construye la orden de producción. En un sistema en producción esto correría de forma automática cada noche; en esta etapa se activa a mano para facilitar las pruebas.
+---
+
+#### Endpoint 2 — Consultar el calendario completo
+`GET /api/v1/calendars/{id}` · Caller: **Frontend del paciente**
+
+Devuelve el estado actual del calendario con todos sus días: fecha, estado, dirección asignada (si la hay) y evidencia de entrega (si ya se registró). Es la vista principal del paciente sobre su plan de entregas.
+
+**Devuelve:** el calendario con su lista de días, cada uno con `id`, `date`, `status`, y opcionalmente `address` y `evidence`.
+
+**Errores posibles:** `404` si el `calendarId` no existe.
+
+---
+
+#### Endpoint 3 — Registrar dirección de entrega
+`POST /api/v1/calendars/{id}/addresses` · Caller: **Frontend del paciente**
+
+El paciente indica a qué dirección debe llegar la entrega de un día específico. Este es el paso que "activa" un día: sin dirección no hay entrega posible.
+
+**Recibe:**
+```json
+{
+  "dayId":     123,
+  "street":    "Av. Javier Prado 1234",
+  "city":      "Lima",
+  "latitude":  -12.0833,
+  "longitude": -77.0167,
+  "references": "Puerta principal (opcional)",
+  "notes":      "Tocar timbre dos veces (opcional)"
+}
+```
+
+**Devuelve:** el `dayId` y la dirección registrada. El día pasa automáticamente de `Pending` a `Scheduled`. Si el día ya tenía dirección, se sobreescribe.
+
+**Errores posibles:** `400` si las coordenadas están fuera de rango (latitud ±90, longitud ±180), `404` si el calendario o el día no existen, `422` si el día está en un estado que no admite cambio de dirección (por ejemplo, ya fue cancelado o entregado).
+
+---
+
+#### Endpoint 4 — Reprogramar un día
+`PUT /api/v1/calendars/{id}/dates` · Caller: **Frontend del paciente**
+
+Permite mover la fecha de una entrega a otro día. Útil cuando el paciente sabe que no estará en casa en la fecha original.
+
+**Recibe:**
+```json
+{
+  "dayId":   123,
+  "newDate": "2026-08-15"
+}
+```
+
+**Devuelve:** el `dayId` y el estado actual del día (que no cambia — solo cambia la fecha).
+
+**Regla de las 48 horas:** si la fecha actual del día está a menos de 48 horas de distancia, la reprogramación es rechazada. La cocina ya empezó a preparar esa entrega y no puede revertirse. El sistema devuelve `409` con un mensaje claro.
+
+**Errores posibles:** `404` si el día no existe, `409` si la ventana de 48 horas ya pasó, `422` si el día está en `ReadyForProduction`, `Delivered`, `Failed` o `Cancelled` (solo se pueden reprogramar días `Pending` o `Scheduled`).
+
+---
+
+#### Endpoint 5 — Cancelar un día
+`POST /api/v1/calendars/{id}/cancel-day` · Caller: **Frontend del paciente**
+
+El paciente decide que no quiere recibir la entrega de un día específico.
+
+**Recibe:**
+```json
+{
+  "dayId": 123
+}
+```
+
+**Devuelve:** el `dayId` y el nuevo estado `Cancelled`.
+
+**Cancelación terminal:** una vez cancelado, el día no puede reactivarse. No existe un endpoint de "revertir cancelación" porque hacerlo implicaría volver a negociar con MS2 y MS3, lo que está fuera del alcance de MS4.
+
+**Regla de las 48 horas:** igual que la reprogramación — si faltan menos de 48 horas, se rechaza con `409`.
+
+**Errores posibles:** `404` si el día no existe, `409` si la ventana de 48 horas ya cerró, `422` si el día ya estaba cancelado, entregado o fallido.
+
+---
+
+#### Endpoint 6 — Orden activa para mañana
+`GET /api/v1/calendars/active-tomorrow` · Caller: **MS3**
+
+Este es el endpoint de mayor impacto operativo. MS3 lo llama una vez por día (la noche anterior) para saber exactamente qué hay que producir y entregar al día siguiente.
+
+**Devuelve:** una lista de líneas de producción, una por cada día de entrega en estado `ReadyForProduction` para la fecha objetivo:
+```json
+[
+  {
+    "packId":    123,
+    "patientId": "uuid",
+    "planId":    "uuid del plan",
+    "hour":      "09:00",
+    "address":   "Av. Javier Prado 1234, Lima",
+    "lat":       -12.0833,
+    "long":      -77.0167
+  }
+]
+```
+
+Con esa lista, MS3 sabe cuántas preparaciones hay que hacer, de qué plan es cada una, y a qué dirección enviarlas. Si un día no tiene dirección asignada (`Pending`) o no fue procesado por el job de catálogo (`Scheduled`), no aparece en esta lista.
+
+**Parámetro opcional `?date=`:** permite consultar la orden para una fecha distinta a mañana. Útil para pruebas o para consultar días pasados.
+
+---
+
+#### Endpoint 7 — Registrar resultado de entrega
+`PATCH /api/v1/calendars/days/{dayId}/delivery-result` · Caller: **MS5**
+
+Es el cierre del ciclo. Cuando el repartidor termina una entrega, MS5 llama a este endpoint para dejar constancia del resultado.
+
+**Recibe:**
+```json
+{
+  "result":       "Delivered",
+  "photoUrl":     "https://cdn.ejemplo.com/foto-entrega.jpg",
+  "signatureUrl": "https://cdn.ejemplo.com/firma.png"
+}
+```
+
+`result` puede ser `Delivered` (entrega exitosa) o `Failed` (intento fallido). La evidencia es opcional — una entrega puede marcarse como fallida sin foto.
+
+**Devuelve:** el `dayId` y el nuevo estado (`Delivered` o `Failed`).
+
+**Idempotencia:** si MS5 llama dos veces con el mismo resultado (reintento), la segunda llamada no produce ningún cambio ni error. Si MS5 intenta cambiar el resultado de `Delivered` a `Failed` (o viceversa), el sistema lo rechaza con `422` — un resultado ya registrado es inmutable.
+
+**Errores posibles:** `404` si el `dayId` no existe, `422` si el día no está en `ReadyForProduction` o `InProduction` (no se puede entregar algo que no fue preparado).
+
+---
+
+#### Endpoint interno — Resolución de catálogo
+`POST /api/v1/calendars/resolve-daily-catalog` · Caller: **ops / demo**
+
+No forma parte del contrato público de MS4. Es el disparador manual del job nocturno que, para cada día en estado `Scheduled` con fecha objetivo, consulta a MS2 para obtener la receta y las porciones, mueve el día a `ReadyForProduction`, y construye la `ProductionOrder` que el endpoint 6 luego devuelve.
+
+En producción este proceso correría automáticamente cada noche vía un scheduler. En esta etapa se expone como endpoint para poder demostrar el flujo completo sin depender de un cron job real. Acepta un parámetro `?date=` para apuntar a una fecha específica.
 
 ---
 

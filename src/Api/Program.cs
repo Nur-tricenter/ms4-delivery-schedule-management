@@ -27,6 +27,11 @@ app.UseHttpsRedirection();
 
 app.MapOpenApi();
 app.MapScalarApiReference();
+app.UseSwaggerUI(options =>
+{
+    options.SwaggerEndpoint("/openapi/v1.json", "MS4 — Delivery Calendar v1");
+    options.RoutePrefix = "swagger";
+});
 
 app.UseExceptionHandler(options => { });
 
