@@ -137,6 +137,30 @@ de este ejercicio):
 Para volver a 1 réplica sana y limpiar los containers atascados en
 `Created`: `docker compose up -d --scale api=1`.
 
+## Configuración vía `.env` (creds/connection string parametrizados)
+
+`docker-compose.yml` ya no hornea las creds de Postgres ni el connection
+string de la Api como literales — usa `${VAR:-default}`, con el mismo valor
+que antes como default. Sin ningún `.env` presente, `docker compose up`
+funciona exactamente igual que antes (defaults = las creds dummy locales
+`admin`/`password`).
+
+`.env` está en `.gitignore` — nunca se commitea. `.env.example` (sí
+trackeado) documenta las variables disponibles: `POSTGRES_DB`,
+`POSTGRES_USER`, `POSTGRES_PASSWORD`, `DB_CONNECTION_STRING`. Para apuntar
+`api` a Neon en vez del `postgres` local: copiar `.env.example` a `.env` y
+reemplazar `DB_CONNECTION_STRING` por el connection string real de Neon
+(agregando `SSL Mode=Require;Trust Server Certificate=true`, que Neon
+exige) — el servicio `postgres` local puede seguir corriendo en paralelo
+sin problema, sencillamente nadie le apunta.
+
+Nota técnica: el healthcheck de `postgres` (`pg_isready -U $$POSTGRES_USER
+-d $$POSTGRES_DB`) usa `$$` — el doble signo de pesos escapa la
+interpolación de Compose para que la variable se resuelva en shell *dentro*
+del container en tiempo de ejecución (donde sí existe como env var), no en
+tiempo de parseo del yml (donde no aplica, es el healthcheck test, no una
+env var de compose).
+
 ## Relación con el flujo de desarrollo de Aspire
 
 `dotnet run --project src/AppHost` sigue siendo el flujo de desarrollo principal (dashboard de

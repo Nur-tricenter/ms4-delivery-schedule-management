@@ -10,6 +10,9 @@ appsettings.Development.json
 appsettings.Local.json
 appsettings.*.local.json
 
+# Local docker-compose overrides (may contain real connection strings, e.g. Neon)
+.env
+
 # User-specific files
 *.rsuser
 *.suo

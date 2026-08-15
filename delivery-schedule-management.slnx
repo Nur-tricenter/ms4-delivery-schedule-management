@@ -9,8 +9,14 @@
     <File Path="global.json" />
     <File Path="README.md" />
   </Folder>
-  <Folder Name="/docs/">
+  <Folder Name="/Solution Items/docker/">
+    <File Path=".dockerignore" />
+    <File Path=".env" />
+    <File Path=".env.example" />
+    <File Path="docker-compose.yml" />
+    <File Path="Dockerfile" />
     <File Path="docs/DOCKER.md" />
+    <File Path="docs/DOCKER-COMPOSE-EXERCISE.md" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/AppHost/AppHost.csproj" />
