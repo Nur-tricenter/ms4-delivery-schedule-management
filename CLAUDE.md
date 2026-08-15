@@ -26,7 +26,7 @@ Note: endpoint #2 serves a dual purpose per the original requirements table — 
 
 ### MS4 outbound dependency
 
-- `ICatalogPort` → `GET /catalog/plans/{id}/day/{date}` on MS2 (synchronous). At this stage: **mocked** (adapter with a fixture or HTTP against a stub).
+- `ICatalogPort` → `GET /catalog/plans/{id}/day/{date}` on MS2 (synchronous). At this stage: **mocked** (adapter with a fixture or HTTP against a stub). **Contract conflict flagged** — the org-wide master endpoint table describes a different, narrower shape for this call. See "Cross-service integration gaps" in §5 for the full comparison and what needs reconciling before real MS2 integration.
 
 ---
 
@@ -194,3 +194,31 @@ cases use `DateTime.UtcNow`-relative dates rather than a fixed instant.
 - Endpoints: `src/Api/Endpoints/Calendars/`, one file per endpoint (partial `Calendars` class, `RoutePrefix = "/api/v1"`), split into `Commands/` and `Queries/` subfolders — mirrors the `src/Application/Calendars/Commands|Queries` layout. `Calendars.cs` at the folder root only holds the `IEndpointGroup.Map` route table; each handler + its request record lives in its own file under the matching subfolder (`Commands/CreateSchedule.cs`, `Queries/GetCalendar.cs`, etc.).
 - Manual test collection: `src/Api/Api.http`.
 - Seed data: `ApplicationDbContextInitialiser.TrySeedAsync` — 3 patients (fixed GUIDs `aaaaaaaa-...0001/2/3`) covering all `DayStatus` values except `InProduction`: Patient 1 all-`Pending`, Patient 2 has a `ReadyForProduction` day for tomorrow (pre-consolidated into a `ProductionOrder` so `active-tomorrow` has data immediately) plus a `Scheduled` day, Patient 3 has `Delivered`/`Failed`/`Cancelled` days. Guarded by `if (await _context.Calendars.AnyAsync()) return;` — only seeds an empty DB.
+
+### Cross-service integration gaps (master endpoint-table audit, 2026-07-10)
+An audit of the org-wide microservice endpoint table (MS1-MS5, cross-service REST calls) against this
+repo's own §0 contract confirmed **MS4's implementation already satisfies every endpoint the master
+table assigns to it** — no code defect. Three gaps surfaced, all upstream/org-level, not fixable
+unilaterally in this repo:
+
+1. **MS5 → MS4 `delivery-result` call (§0 endpoint #7) is missing from the master table entirely.**
+   It's implemented here (`ApplyDeliveryResultCommand`) and backs a domain invariant (§1: a
+   `DeliveryDay` only reaches `Delivered`/`Failed` via this call) — but the master table never shows
+   MS5 calling MS4 anywhere. Until the master architecture doc (and MS5's implementation) account for
+   this call, delivery outcomes never close the loop back into MS4 system-wide, and every
+   `DeliveryDay` stays stuck in `ReadyForProduction`/`InProduction`. Not actionable from MS4's side —
+   flag to whoever owns the master table / MS5.
+
+2. **MS4 ↔ MS2 outbound catalog contract has three conflicting shapes**: this repo's own §0 says
+   `GET /catalog/plans/{id}/day/{date}` (day-specific, returns recipe/portions); the master table's
+   MS4→MS2 row says plain `GET /catalog/plans/{id}` (same lightweight existence check MS1/MS3 use
+   elsewhere, no day param, no recipe/portion payload); a third row shows MS3 (not MS4) doing the real
+   batch recipe/portion resolution via `POST /catalog/plans/structure`. Currently harmless —
+   `ICatalogPort` is mocked (`Infrastructure/Catalog/MockCatalogPort.cs`, Stage 4 explicit scope, no
+   real HTTP call yet) — but **must be reconciled with MS2's team before wiring a real adapter**, or
+   `ResolveDailyCatalogCommand` will call a path MS2 doesn't expose.
+
+3. **Minor: `GET /calendars/{id}` (§0 endpoint #6) isn't listed in the master table**, unlike similar
+   frontend-read endpoints for other services. Low risk (frontend-only, no cross-MS dependency,
+   already implemented as `GetCalendarQuery`) — worth a line item upstream for completeness, not a
+   blocker.

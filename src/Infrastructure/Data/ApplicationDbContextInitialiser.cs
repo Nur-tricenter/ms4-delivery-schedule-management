@@ -120,8 +120,9 @@ public class ApplicationDbContextInitialiser
         failedDay.MarkReadyForProduction(new RecipeReference("recipe-demo-failed"), new PortionQuantity(1));
         failedDay.ApplyDeliveryResult(DeliveryResult.Failed, null, now.AddDays(-19));
 
-        // startDate + 25 days = today + 5 days — comfortably outside the 48h lock window.
-        var cancelledDay = historyCalendar.Days.ElementAt(25);
+        // startDate + 29 days = today + 9 days — furthest available day in this calendar,
+        // maximises safety margin above the 48h lock window.
+        var cancelledDay = historyCalendar.Days.ElementAt(29);
         cancelledDay.SetAddress(new DeliveryAddress("102 5th Ave", "Metropolis", new Coordinates(5.2, 5.2)));
         cancelledDay.Cancel(now);
 

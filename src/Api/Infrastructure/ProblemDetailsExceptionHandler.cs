@@ -57,6 +57,20 @@ public class ProblemDetailsExceptionHandler : IExceptionHandler
                 Title = "The requested operation is not valid for the delivery day's current status.",
                 Detail = it.Message
             }),
+            ArgumentOutOfRangeException aoor => (StatusCodes.Status422UnprocessableEntity, new ProblemDetails
+            {
+                Status = StatusCodes.Status422UnprocessableEntity,
+                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.21",
+                Title = "The provided value is out of the allowed range.",
+                Detail = aoor.Message
+            }),
+            ArgumentException ae => (StatusCodes.Status422UnprocessableEntity, new ProblemDetails
+            {
+                Status = StatusCodes.Status422UnprocessableEntity,
+                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.21",
+                Title = "The provided argument is invalid.",
+                Detail = ae.Message
+            }),
             _ => (-1, null)
         };
 

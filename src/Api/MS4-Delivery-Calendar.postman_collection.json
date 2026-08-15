@@ -1,0 +1,817 @@
+{
+  "info": {
+    "_postman_id": "ms4-delivery-calendar-automated-v1",
+    "name": "MS4 — Delivery Calendar",
+    "description": "Automated test flows for the MS4 Delivery Calendar microservice.\n\nEvery flow generates its own UUIDs and dates — no manual values to change between runs.\n\n**Before running:**\n1. Start the app: `dotnet run --project src/AppHost`\n2. Copy the API URL from the Aspire dashboard (webapi resource)\n3. Set the `baseUrl` collection variable to that URL\n\nRun flows individually or use the Postman Collection Runner to execute all flows in sequence.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",              "value": "http://localhost:5000",  "description": "Set this to the API URL shown in the Aspire dashboard" },
+    { "key": "calendarId",           "value": "" },
+    { "key": "dayId_main",           "value": "" },
+    { "key": "dayId_reschedule",     "value": "" },
+    { "key": "dayId_cancel",         "value": "" },
+    { "key": "contractId_flow1",     "value": "" },
+    { "key": "patientId_flow1",      "value": "" },
+    { "key": "planId_flow1",         "value": "" },
+    { "key": "date_start",           "value": "" },
+    { "key": "date_far_future",      "value": "" },
+    { "key": "calendarId_flow2",     "value": "" },
+    { "key": "contractId_flow2",     "value": "" },
+    { "key": "patientId_flow2",      "value": "" },
+    { "key": "planId_flow2",         "value": "" },
+    { "key": "calendarId_flow3",     "value": "" },
+    { "key": "dayId_flow3",          "value": "" },
+    { "key": "calendarId_flow4",     "value": "" },
+    { "key": "dayId_flow4_cancel",   "value": "" },
+    { "key": "dayId_flow4_pending",  "value": "" }
+  ],
+  "item": [
+
+    {
+      "name": "Flow 1 — Full Happy Path",
+      "description": "End-to-end lifecycle: create → set address → resolve catalog → read production order → reschedule a day → cancel a day → record delivery result.\n\nAll IDs and dates are auto-generated. Days[0] goes through the full delivery cycle. Days[1] gets rescheduled. Days[2] gets cancelled.",
+      "item": [
+
+        {
+          "name": "[1.1] Create Calendar",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function uuid() {",
+                  "  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {",
+                  "    const r = Math.random() * 16 | 0;",
+                  "    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);",
+                  "  });",
+                  "}",
+                  "const fmt = d => d.toISOString().split('T')[0];",
+                  "const today = new Date();",
+                  "const start = new Date(today); start.setDate(today.getDate() + 3);",
+                  "const far   = new Date(today); far.setDate(today.getDate() + 45);",
+                  "pm.collectionVariables.set('date_start',      fmt(start));",
+                  "pm.collectionVariables.set('date_far_future', fmt(far));",
+                  "pm.collectionVariables.set('contractId_flow1', uuid());",
+                  "pm.collectionVariables.set('patientId_flow1',  uuid());",
+                  "pm.collectionVariables.set('planId_flow1',     uuid());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('calendarId is positive integer', () => pm.expect(b.calendarId).to.be.a('number').and.above(0));",
+                  "pm.test('15 days returned',  () => pm.expect(b.days).to.have.length(15));",
+                  "pm.test('all days Pending',  () => b.days.forEach(d => pm.expect(d.status).to.eql('Pending')));",
+                  "pm.collectionVariables.set('calendarId',      b.calendarId);",
+                  "pm.collectionVariables.set('dayId_main',      b.days[0].id);",
+                  "pm.collectionVariables.set('dayId_reschedule',b.days[1].id);",
+                  "pm.collectionVariables.set('dayId_cancel',    b.days[2].id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contractId\": \"{{contractId_flow1}}\",\n  \"patientId\":  \"{{patientId_flow1}}\",\n  \"planId\":     \"{{planId_flow1}}\",\n  \"duration\":   15,\n  \"startDate\":  \"{{date_start}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/schedule",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "schedule"]
+            }
+          }
+        },
+
+        {
+          "name": "[1.2] Inspect Calendar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('id matches calendarId', () => pm.expect(b.id).to.eql(parseInt(pm.collectionVariables.get('calendarId'))));",
+                  "pm.test('15 days in calendar',   () => pm.expect(b.days).to.have.length(15));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/calendars/{{calendarId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "calendars", "{{calendarId}}"]
+            }
+          }
+        },
+
+        {
+          "name": "[1.3] Set Delivery Address (days[0] → Scheduled)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('dayId matches',     () => pm.expect(b.dayId).to.eql(parseInt(pm.collectionVariables.get('dayId_main'))));",
+                  "pm.test('street is set',     () => pm.expect(b.address.street).to.eql('Av. Javier Prado 1234'));",
+                  "pm.test('city is set',       () => pm.expect(b.address.city).to.eql('Lima'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dayId\":     {{dayId_main}},\n  \"street\":    \"Av. Javier Prado 1234\",\n  \"city\":      \"Lima\",\n  \"latitude\":  -12.0833,\n  \"longitude\": -77.0167,\n  \"references\": \"Puerta principal\",\n  \"notes\":      \"Tocar el timbre dos veces\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/calendars/{{calendarId}}/addresses",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "calendars", "{{calendarId}}", "addresses"]
+            }
+          }
+        },
+
+        {
+          "name": "[1.4] Resolve Daily Catalog (ops trigger)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 No Content', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/calendars/resolve-daily-catalog?date={{date_start}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "calendars", "resolve-daily-catalog"],
+              "query": [{ "key": "date", "value": "{{date_start}}" }]
+            }
+          }
+        },
+
+        {
+          "name": "[1.5] Get Active Tomorrow — Production Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('response is array',            () => pm.expect(b).to.be.an('array'));",
+                  "pm.test('at least 1 line in order',     () => pm.expect(b.length).to.be.above(0));",
+                  "const mainDayId = parseInt(pm.collectionVariables.get('dayId_main'));",
+                  "const line = b.find(l => l.packId === mainDayId);",
+                  "pm.test('our day appears in the order', () => pm.expect(line).to.not.be.undefined);",
+                  "pm.test('address is present in line',   () => pm.expect(line.address).to.not.be.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/calendars/active-tomorrow?date={{date_start}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "calendars", "active-tomorrow"],
+              "query": [{ "key": "date", "value": "{{date_start}}" }]
+            }
+          }
+        },
+
+        {
+          "name": "[1.6] Reschedule days[1] to Far Future",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('dayId matches',          () => pm.expect(b.dayId).to.eql(parseInt(pm.collectionVariables.get('dayId_reschedule'))));",
+                  "pm.test('status still Pending',   () => pm.expect(b.status).to.eql('Pending'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dayId\":   {{dayId_reschedule}},\n  \"newDate\": \"{{date_far_future}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/calendars/{{calendarId}}/dates",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "calendars", "{{calendarId}}", "dates"]
+            }
+          }
+        },
+
+        {
+          "name": "[1.7] Cancel days[2]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('dayId matches',         () => pm.expect(b.dayId).to.eql(parseInt(pm.collectionVariables.get('dayId_cancel'))));",
+                  "pm.test('status is Cancelled',   () => pm.expect(b.status).to.eql('Cancelled'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dayId\": {{dayId_cancel}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/calendars/{{calendarId}}/cancel-day",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "calendars", "{{calendarId}}", "cancel-day"]
+            }
+          }
+        },
+
+        {
+          "name": "[1.8] Record Delivery Result — DELIVERED",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('dayId matches',         () => pm.expect(b.dayId).to.eql(parseInt(pm.collectionVariables.get('dayId_main'))));",
+                  "pm.test('status is Delivered',   () => pm.expect(b.status).to.eql('Delivered'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"result\":       \"Delivered\",\n  \"photoUrl\":     \"https://example.com/evidence.jpg\",\n  \"signatureUrl\": null\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/calendars/days/{{dayId_main}}/delivery-result",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "calendars", "days", "{{dayId_main}}", "delivery-result"]
+            }
+          }
+        },
+
+        {
+          "name": "[1.9] Record Delivery Result Again (idempotency check)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK — second call is safe', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('status still Delivered',        () => pm.expect(b.status).to.eql('Delivered'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"result\":       \"Delivered\",\n  \"photoUrl\":     \"https://example.com/evidence.jpg\",\n  \"signatureUrl\": null\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/calendars/days/{{dayId_main}}/delivery-result",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "calendars", "days", "{{dayId_main}}", "delivery-result"]
+            }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "Flow 2 — Idempotency (POST /schedule)",
+      "description": "Proves that calling POST /schedule twice with the same contractId returns the exact same calendar without creating a duplicate.",
+      "item": [
+
+        {
+          "name": "[2.1] Create Calendar (first call)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function uuid() {",
+                  "  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {",
+                  "    const r = Math.random() * 16 | 0;",
+                  "    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);",
+                  "  });",
+                  "}",
+                  "const fmt = d => d.toISOString().split('T')[0];",
+                  "const start = new Date(); start.setDate(start.getDate() + 10);",
+                  "pm.collectionVariables.set('contractId_flow2', uuid());",
+                  "pm.collectionVariables.set('patientId_flow2',  uuid());",
+                  "pm.collectionVariables.set('planId_flow2',     uuid());",
+                  "pm.collectionVariables.set('date_start',       fmt(start));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('calendarId returned', () => pm.expect(b.calendarId).to.be.above(0));",
+                  "pm.collectionVariables.set('calendarId_flow2', b.calendarId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contractId\": \"{{contractId_flow2}}\",\n  \"patientId\":  \"{{patientId_flow2}}\",\n  \"planId\":     \"{{planId_flow2}}\",\n  \"duration\":   15,\n  \"startDate\":  \"{{date_start}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/schedule",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "schedule"]
+            }
+          }
+        },
+
+        {
+          "name": "[2.2] Create Again (same contractId) — must return same calendarId",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const b   = pm.response.json();",
+                  "const orig = parseInt(pm.collectionVariables.get('calendarId_flow2'));",
+                  "pm.test('same calendarId returned (no duplicate created)', () => pm.expect(b.calendarId).to.eql(orig));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contractId\": \"{{contractId_flow2}}\",\n  \"patientId\":  \"{{patientId_flow2}}\",\n  \"planId\":     \"{{planId_flow2}}\",\n  \"duration\":   15,\n  \"startDate\":  \"{{date_start}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/schedule",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "schedule"]
+            }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "Flow 3 — 48h Lock Rule",
+      "description": "Creates a calendar starting today so days[0] is immediately within the 48-hour lock window. Proves that cancel and reschedule are both rejected with 409.",
+      "item": [
+
+        {
+          "name": "[3.1] Create Calendar Starting Today",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function uuid() {",
+                  "  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {",
+                  "    const r = Math.random() * 16 | 0;",
+                  "    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);",
+                  "  });",
+                  "}",
+                  "const fmt = d => d.toISOString().split('T')[0];",
+                  "const today = new Date();",
+                  "pm.collectionVariables.set('date_today', fmt(today));",
+                  "pm.collectionVariables.set('date_far_future', fmt(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 45)));",
+                  "pm.collectionVariables.set('contractId_flow2', uuid());",
+                  "pm.collectionVariables.set('patientId_flow2',  uuid());",
+                  "pm.collectionVariables.set('planId_flow2',     uuid());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.collectionVariables.set('calendarId_flow3', b.calendarId);",
+                  "pm.collectionVariables.set('dayId_flow3',      b.days[0].id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contractId\": \"{{contractId_flow2}}\",\n  \"patientId\":  \"{{patientId_flow2}}\",\n  \"planId\":     \"{{planId_flow2}}\",\n  \"duration\":   15,\n  \"startDate\":  \"{{date_today}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/schedule",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "schedule"]
+            }
+          }
+        },
+
+        {
+          "name": "[3.2] Cancel Locked Day — expect 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 Conflict — 48h lock', () => pm.response.to.have.status(409));",
+                  "const b = pm.response.json();",
+                  "pm.test('problem details present', () => pm.expect(b.status).to.eql(409));",
+                  "pm.test('lock message in detail',  () => pm.expect(b.title).to.include('48-hour'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dayId\": {{dayId_flow3}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/calendars/{{calendarId_flow3}}/cancel-day",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "calendars", "{{calendarId_flow3}}", "cancel-day"]
+            }
+          }
+        },
+
+        {
+          "name": "[3.3] Reschedule Locked Day — expect 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 Conflict — 48h lock', () => pm.response.to.have.status(409));",
+                  "const b = pm.response.json();",
+                  "pm.test('problem details present', () => pm.expect(b.status).to.eql(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dayId\":   {{dayId_flow3}},\n  \"newDate\": \"{{date_far_future}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/calendars/{{calendarId_flow3}}/dates",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "calendars", "{{calendarId_flow3}}", "dates"]
+            }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "Flow 4 — Invalid State Transitions",
+      "description": "Proves that the domain rejects operations on days in the wrong status, returning 422 Unprocessable Entity.",
+      "item": [
+
+        {
+          "name": "[4.1] Create Calendar (far future start)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function uuid() {",
+                  "  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {",
+                  "    const r = Math.random() * 16 | 0;",
+                  "    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);",
+                  "  });",
+                  "}",
+                  "const fmt = d => d.toISOString().split('T')[0];",
+                  "const start = new Date(); start.setDate(start.getDate() + 10);",
+                  "pm.collectionVariables.set('date_start',      fmt(start));",
+                  "pm.collectionVariables.set('contractId_flow2', uuid());",
+                  "pm.collectionVariables.set('patientId_flow2',  uuid());",
+                  "pm.collectionVariables.set('planId_flow2',     uuid());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.collectionVariables.set('calendarId_flow4',    b.calendarId);",
+                  "pm.collectionVariables.set('dayId_flow4_cancel',  b.days[0].id);",
+                  "pm.collectionVariables.set('dayId_flow4_pending', b.days[1].id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contractId\": \"{{contractId_flow2}}\",\n  \"patientId\":  \"{{patientId_flow2}}\",\n  \"planId\":     \"{{planId_flow2}}\",\n  \"duration\":   15,\n  \"startDate\":  \"{{date_start}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/schedule",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "schedule"]
+            }
+          }
+        },
+
+        {
+          "name": "[4.2] Cancel days[0] (succeeds — sets up next test)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('status Cancelled', () => pm.expect(pm.response.json().status).to.eql('Cancelled'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dayId\": {{dayId_flow4_cancel}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/calendars/{{calendarId_flow4}}/cancel-day",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "calendars", "{{calendarId_flow4}}", "cancel-day"]
+            }
+          }
+        },
+
+        {
+          "name": "[4.3] Set Address on Cancelled Day — expect 422",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422 Unprocessable Entity', () => pm.response.to.have.status(422));",
+                  "const b = pm.response.json();",
+                  "pm.test('problem details present',  () => pm.expect(b.status).to.eql(422));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dayId\":     {{dayId_flow4_cancel}},\n  \"street\":    \"Should fail\",\n  \"city\":      \"Lima\",\n  \"latitude\":  -12.0833,\n  \"longitude\": -77.0167\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/calendars/{{calendarId_flow4}}/addresses",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "calendars", "{{calendarId_flow4}}", "addresses"]
+            }
+          }
+        },
+
+        {
+          "name": "[4.4] Cancel Already-Cancelled Day — expect 422",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422 Unprocessable Entity', () => pm.response.to.have.status(422));",
+                  "const b = pm.response.json();",
+                  "pm.test('problem details present',  () => pm.expect(b.status).to.eql(422));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dayId\": {{dayId_flow4_cancel}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/calendars/{{calendarId_flow4}}/cancel-day",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "calendars", "{{calendarId_flow4}}", "cancel-day"]
+            }
+          }
+        },
+
+        {
+          "name": "[4.5] Deliver a Pending Day — expect 422",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422 Unprocessable Entity', () => pm.response.to.have.status(422));",
+                  "const b = pm.response.json();",
+                  "pm.test('problem details present',  () => pm.expect(b.status).to.eql(422));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"result\":    \"Delivered\",\n  \"photoUrl\":  null,\n  \"signatureUrl\": null\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/calendars/days/{{dayId_flow4_pending}}/delivery-result",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "calendars", "days", "{{dayId_flow4_pending}}", "delivery-result"]
+            }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "Flow 5 — Validation Errors",
+      "description": "Proves that malformed requests return 400 Bad Request and missing resources return 404 Not Found.",
+      "item": [
+
+        {
+          "name": "[5.1] Create with Invalid Duration (7) — expect 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "const b = pm.response.json();",
+                  "pm.test('errors object present', () => pm.expect(b.errors).to.exist);",
+                  "pm.test('Duration error present', () => pm.expect(JSON.stringify(b.errors)).to.include('Duration'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contractId\": \"aaaaaaaa-0000-0000-0000-000000000099\",\n  \"patientId\":  \"bbbbbbbb-0000-0000-0000-000000000099\",\n  \"planId\":     \"cccccccc-0000-0000-0000-000000000099\",\n  \"duration\":   7,\n  \"startDate\":  \"2026-12-01\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/schedule",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "schedule"]
+            }
+          }
+        },
+
+        {
+          "name": "[5.2] Get Non-Existent Calendar — expect 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 Not Found', () => pm.response.to.have.status(404));",
+                  "const b = pm.response.json();",
+                  "pm.test('problem details present', () => pm.expect(b.status).to.eql(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/calendars/999999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "calendars", "999999"]
+            }
+          }
+        },
+
+        {
+          "name": "[5.3] Set Address with Invalid Coordinates — expect 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dayId\":     1,\n  \"street\":    \"Test St\",\n  \"city\":      \"Lima\",\n  \"latitude\":  999,\n  \"longitude\": -77.0167\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/calendars/1/addresses",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "calendars", "1", "addresses"]
+            }
+          }
+        }
+
+      ]
+    }
+
+  ]
+}
