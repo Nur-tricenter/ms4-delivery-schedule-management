@@ -1,0 +1,13 @@
+**/bin/
+**/obj/
+artifacts/
+.git/
+.vs/
+.vscode/
+**/TestResults/
+**/node_modules/
+tests/
+docker-compose.yml
+Dockerfile
+.dockerignore
+*.md
