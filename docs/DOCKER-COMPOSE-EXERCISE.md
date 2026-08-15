@@ -1,10 +1,5 @@
 # Ejercicio de Docker Compose — MS4 (módulo 2, actividad 3)
 
-Este documento se escribe en español, siguiendo la misma excepción puntual ya
-aplicada en [`DOCKER.md`](./DOCKER.md) a la regla de "todo en inglés" de
-`CLAUDE.md` — es documentación de una actividad académica, pensada para
-explicarla, no código ni docs de arquitectura del proyecto MS4.
-
 Objetivo de la actividad: levantar un stack de 3 servicios con Docker
 Compose (`api`, `db`, `cache`), configurar healthchecks y `depends_on` con
 `condition`, levantar el stack y verificar red/healthchecks/DNS, y escalar
