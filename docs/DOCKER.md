@@ -88,6 +88,55 @@ chequeo de auditoría de NuGet convierte esto en un error de restore bajo
 que aparece ahí incluso en configuraciones donde un restore local cacheado podría no mostrarlo. Se
 corrigió subiendo el pin a la versión parcheada `10.0.10`, no suprimiendo el warning.
 
+## Tercer servicio: `cache` (Redis)
+
+Se agregó `cache` (`redis:7-alpine`) como tercer servicio del stack, con
+healthcheck vía `redis-cli ping` (mismo patrón de `interval`/`timeout`/
+`retries`/`start_period` que `postgres`). `api` ahora depende de **ambos**
+(`postgres` y `cache`) con `condition: service_healthy`. Es infraestructura
+pura para este ejercicio de Compose — la Api no lo consume todavía en código
+(no hay `IDistributedCache`/cliente Redis wireado); agregar eso sería una
+feature nueva, fuera de alcance acá.
+
+## Por qué se quitó `container_name` de `api`
+
+`postgres` y `cache` mantienen `container_name` fijo porque nunca se
+escalan. `api` lo tenía también, pero un `container_name` fijo choca al
+crear una segunda réplica (Compose no puede tener dos containers con el
+mismo nombre) — así que escalar `api` fallaría por nombre duplicado antes
+de siquiera llegar al problema real que se quería observar. Sin
+`container_name`, Compose nombra las réplicas automáticamente
+(`..._api-1`, `..._api-2`, ...).
+
+## Qué pasa al escalar `api` (`docker compose up -d --scale api=3`)
+
+Resultado real observado:
+
+```
+Error response from daemon: driver failed programming external connectivity
+on endpoint delivery-schedule-management-api-2 (...): Bind for 0.0.0.0:8080
+failed: port is already allocated
+```
+
+`api-1` arranca y queda `Up` normalmente. `api-2` y `api-3` se crean pero
+quedan atascados en estado `Created` (nunca llegan a `Running`) porque
+`ports: "8080:8080"` es un *binding fijo* al puerto 8080 del host — solo un
+container puede reclamar ese puerto a la vez. `postgres` y `cache` no se
+tocan (no estaban en `--scale`) y siguen `healthy` con 1 réplica cada uno,
+sin verse afectados por el fallo de `api`.
+
+Esto es intencional como lección: un puerto de host fijo es, en la
+práctica, un límite duro de una sola réplica. Para escalar `api` de verdad
+harían falta cualquiera de estas dos cosas (no aplicadas acá, quedan fuera
+de este ejercicio):
+- Quitar el mapeo fijo (`"8080:8080"` → `"8080"`) y dejar que Docker asigne
+  un puerto efímero del host por réplica.
+- Poner un reverse proxy / load balancer delante de las réplicas, que sea
+  el único que publica un puerto al host.
+
+Para volver a 1 réplica sana y limpiar los containers atascados en
+`Created`: `docker compose up -d --scale api=1`.
+
 ## Relación con el flujo de desarrollo de Aspire
 
 `dotnet run --project src/AppHost` sigue siendo el flujo de desarrollo principal (dashboard de

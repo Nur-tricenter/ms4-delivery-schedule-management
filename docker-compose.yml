@@ -18,13 +18,25 @@ services:
       start_period: 5s
     restart: unless-stopped
 
+  cache:
+    image: redis:7-alpine
+    container_name: delivery-schedule-management-cache
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+
   api:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: delivery-schedule-management-api
     depends_on:
       postgres:
+        condition: service_healthy
+      cache:
         condition: service_healthy
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
