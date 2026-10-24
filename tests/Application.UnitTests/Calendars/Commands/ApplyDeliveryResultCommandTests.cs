@@ -17,7 +17,7 @@ public class ApplyDeliveryResultCommandTests
     private static async Task<(FakeCalendarRepository Repo, int DayId)> SeedReadyDay()
     {
         var repository = new FakeCalendarRepository();
-        var createHandler = new CreateScheduleCommandHandler(repository, new FakeApplicationDbContext());
+        var createHandler = new CreateScheduleCommandHandler(repository, new FakeApplicationDbContext(), new FakePlanCatalog(), Microsoft.Extensions.Logging.Abstractions.NullLogger<CreateScheduleCommandHandler>.Instance);
 
         var created = await createHandler.Handle(
             new CreateScheduleCommand(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 15, new DateOnly(2026, 8, 10)),
@@ -31,7 +31,7 @@ public class ApplyDeliveryResultCommandTests
             CancellationToken.None);
 
         var calendar = await repository.GetByIdAsync(created.CalendarId, CancellationToken.None);
-        calendar!.Days.First(d => d.Id == dayId).MarkReadyForProduction(new RecipeReference("recipe-1"), new PortionQuantity(2));
+        calendar!.Days.First(d => d.Id == dayId).MarkReadyForProduction([new MenuItem("Lunch", 3, Guid.NewGuid(), "recipe-1", 2)]);
 
         return (repository, dayId);
     }

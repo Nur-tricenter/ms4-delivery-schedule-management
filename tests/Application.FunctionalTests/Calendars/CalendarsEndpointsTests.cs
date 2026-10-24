@@ -13,6 +13,7 @@ using delivery_schedule_management.Application.Calendars.Common;
 using delivery_schedule_management.Domain.Enums;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Nur.Tricenter.Access.DeliveryCalendar;
 
 namespace delivery_schedule_management.Application.FunctionalTests.Calendars;
 
@@ -136,7 +137,8 @@ public class CalendarsEndpointsTests : TestBase
         var dayId = created.Days[0].Id;
 
         var response = await client.PutAsJsonAsync($"/api/v1/calendars/{created.CalendarId}/dates",
-            new RescheduleDateRequest(dayId, startDate.AddDays(5)));
+            // Past the calendar's last day: a date already held by another day is rejected (400).
+            new RescheduleDateRequest(dayId, startDate.AddDays(20)));
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var result = await response.Content.ReadFromJsonAsync<RescheduleDeliveryDayResult>(JsonOptions);
@@ -297,5 +299,64 @@ public class CalendarsEndpointsTests : TestBase
         var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
         problem.ShouldNotBeNull();
         problem.Status.ShouldBe(StatusCodes.Status404NotFound);
+    }
+
+    [Test]
+    public async Task PostSchedule_ShouldReturn400_NamingTheInvalidField()
+    {
+        using var client = CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/v1/schedule", new CreateScheduleRequest(
+            Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 7, DateOnly.FromDateTime(DateTime.UtcNow).AddDays(10)));
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
+        problem.ShouldNotBeNull();
+        problem.Errors.ShouldContainKey("Duration");
+    }
+
+    // --- Platform security (Nur.Tricenter.Security) ---
+
+    [Test]
+    public async Task AnyEndpoint_ShouldReturn401_WithoutBearerToken()
+    {
+        using var client = FunctionalTestSetup.CreateAnonymousHttpClient();
+
+        var response = await client.GetAsync("/api/v1/calendars/active-tomorrow");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+    }
+
+    [Test]
+    public async Task Endpoint_ShouldReturn403_WhenTokenLacksItsScope()
+    {
+        // A patient-frontend token (calendar scopes only) must not create calendars — that is MS3's scope.
+        using var client = FunctionalTestSetup.CreateHttpClient(
+            DeliveryCalendarPermission.CalendarRead, DeliveryCalendarPermission.CalendarEdit);
+
+        var response = await client.PostAsJsonAsync("/api/v1/schedule", new CreateScheduleRequest(
+            Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 15, DateOnly.FromDateTime(DateTime.UtcNow).AddDays(10)));
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+    }
+
+    [Test]
+    public async Task Endpoint_ShouldSucceed_WithOnlyItsOwnScope()
+    {
+        using var client = FunctionalTestSetup.CreateHttpClient(DeliveryCalendarPermission.ProductionOrderRead);
+
+        var response = await client.GetAsync("/api/v1/calendars/active-tomorrow");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [Test]
+    public async Task Health_ShouldBeAnonymous()
+    {
+        using var client = FunctionalTestSetup.CreateAnonymousHttpClient();
+
+        var response = await client.GetAsync("/health");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 }

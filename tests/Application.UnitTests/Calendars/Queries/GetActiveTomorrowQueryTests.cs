@@ -27,7 +27,7 @@ public class GetActiveTomorrowQueryTests
         var deliveryDate = new DateOnly(2026, 8, 10);
         var calendarRepository = new FakeCalendarRepository();
         var orderRepository = new FakeProductionOrderRepository();
-        var createHandler = new CreateScheduleCommandHandler(calendarRepository, new FakeApplicationDbContext());
+        var createHandler = new CreateScheduleCommandHandler(calendarRepository, new FakeApplicationDbContext(), new FakePlanCatalog(), Microsoft.Extensions.Logging.Abstractions.NullLogger<CreateScheduleCommandHandler>.Instance);
 
         var created = await createHandler.Handle(
             new CreateScheduleCommand(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 15, deliveryDate),
@@ -40,7 +40,8 @@ public class GetActiveTomorrowQueryTests
 
         var resolveClock = new TestClock(new DateTimeOffset(deliveryDate.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero).AddDays(-1));
         var resolveHandler = new ResolveDailyCatalogCommandHandler(
-            calendarRepository, orderRepository, new FakeCatalogPort(), new FakeApplicationDbContext(), resolveClock);
+            calendarRepository, orderRepository, new FakeCatalogPort(), new FakeApplicationDbContext(), resolveClock,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<ResolveDailyCatalogCommandHandler>.Instance);
         await resolveHandler.Handle(new ResolveDailyCatalogCommand(deliveryDate), CancellationToken.None);
 
         var queryHandler = new GetActiveTomorrowQueryHandler(orderRepository, resolveClock);

@@ -54,7 +54,10 @@ public static class Extensions
             {
                 metrics.AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
-                    .AddRuntimeInstrumentation();
+                    .AddRuntimeInstrumentation()
+                    // Same meter list the Nur-Tricenter observability kernel collects. A meter
+                    // missing here is counted in-process and silently never exported.
+                    .AddMeter("Npgsql", "Joseco.Communication.RabbitMQ", "Store.*");
             })
             .WithTracing(tracing =>
             {
@@ -100,19 +103,18 @@ public static class Extensions
 
     public static WebApplication MapDefaultEndpoints(this WebApplication app)
     {
-        // Adding health checks endpoints to applications in non-development environments has security implications.
-        // See https://aka.ms/dotnet/aspire/healthchecks for details before enabling these endpoints in non-development environments.
-        if (app.Environment.IsDevelopment())
-        {
-            // All health checks must pass for app to be considered ready to accept traffic after starting
-            app.MapHealthChecks("/health");
+        // Mapped in every environment, not only Development: on the Nur-Tricenter platform Consul
+        // polls /health to decide whether the gateway routes to this instance, and an instance
+        // with no passing check gets no route at all. The response carries only check names and
+        // statuses, never configuration.
+        // All health checks must pass for app to be considered ready to accept traffic after starting
+        app.MapHealthChecks("/health").AllowAnonymous();
 
-            // Only health checks tagged with the "live" tag must pass for app to be considered alive
-            app.MapHealthChecks("/alive", new HealthCheckOptions
-            {
-                Predicate = r => r.Tags.Contains("live")
-            });
-        }
+        // Only health checks tagged with the "live" tag must pass for app to be considered alive
+        app.MapHealthChecks("/alive", new HealthCheckOptions
+        {
+            Predicate = r => r.Tags.Contains("live")
+        }).AllowAnonymous();
 
         return app;
     }

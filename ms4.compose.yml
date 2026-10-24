@@ -1,0 +1,153 @@
+# =============================================================================
+#  MS4 — Delivery Calendar, Nur-Tricenter PLATFORM variant.
+#
+#  Included by nur-tricenter-local/compose/docker-compose.yml:
+#
+#    include:
+#      - path: ../../ms4-delivery-schedule-management/ms4.compose.yml
+#
+#  so this repository must be cloned as `ms4-delivery-schedule-management`, a sibling of
+#  nur-tricenter-local (inside the same `nurtricenter/` folder as ms2-plans-and-recipes-catalog
+#  and nur-tricenter-identity). nur-tricenter-local's setup-project script does that.
+#
+#  NOT declared here, deliberately: Postgres (`db`), RabbitMQ (`rabbitmq`) and Consul (`consul`).
+#  They belong to the platform (nur-tricenter-local/compose/docker-compose.infra.yml). This file
+#  only adds MS4's own processes to the shared `nur-tricenter-net` network.
+#
+#  For running MS4 ALONE use Aspire (`dotnet run --project src/AppHost`) or the standalone
+#  docker-compose.yml in this folder — neither is involved here.
+#
+#  Binaries are bind-mounted, not built into an image (same as every other platform service):
+#  run `dotnet build` in this repository first. Directory.Build.props sets ArtifactsPath, so the
+#  output lives under artifacts/bin/<Project>/debug, not src/<Project>/bin/Debug/net10.0.
+#
+#  Values below are DEV-ONLY and match the rest of the platform's local stack.
+# =============================================================================
+
+x-ms4-database: &ms4-database
+  ConnectionStrings__delivery-schedule-management-db: "Host=nur-tricenter-postgres;Port=5432;Database=ms4_delivery_calendar;Username=dev-only;Password=dev-only-password"
+
+# In Development, ASP.NET Core loads the build's static-web-assets manifest, which holds the HOST's
+# Windows paths; inside the Linux container they are not absolute and the host crashes on startup
+# ("The path must be absolute"). Pointing the manifest key at a missing file disables it. (The
+# catalog doesn't hit this only because it ships no static web assets.)
+x-ms4-web-host: &ms4-web-host
+  ASPNETCORE_ENVIRONMENT: Development
+  ASPNETCORE_STATICWEBASSETS: /nonexistent-staticwebassets.json
+
+services:
+  # One-shot job: applies EF Core migrations, then exits. The API waits for it to COMPLETE, so the
+  # schema is in place before the first request and two API replicas never race to migrate.
+  delivery-calendar-migrate:
+    image: mcr.microsoft.com/dotnet/aspnet:10.0
+    container_name: nur-tricenter-delivery-calendar-migrate
+    hostname: delivery-calendar-migrate
+    working_dir: /app
+    command: ["dotnet", "delivery_schedule_management.Api.dll", "--migrate"]
+    volumes:
+      - ./artifacts/bin/Api/debug:/app:ro
+    environment:
+      <<: [*ms4-database, *ms4-web-host]
+      # --migrate never validates a token, but the host still composes the JWT handler.
+      Jwt__SecretKey: "dev-only-signing-key-not-a-secret-0123456789"
+    networks: [nur-tricenter-net]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  delivery-calendar-api:
+    image: mcr.microsoft.com/dotnet/aspnet:10.0
+    container_name: nur-tricenter-delivery-calendar-api
+    hostname: delivery-calendar-api
+    working_dir: /app
+    command: ["dotnet", "delivery_schedule_management.Api.dll"]
+    volumes:
+      - ./artifacts/bin/Api/debug:/app:ro
+    environment:
+      <<: [*ms4-database, *ms4-web-host]
+      ASPNETCORE_URLS: http://+:8080
+
+      # These MUST equal identity's Jwt__* (identity.compose.yml). A mismatch is a 401 on every
+      # request, not a startup error.
+      Jwt__SecretKey: "dev-only-signing-key-not-a-secret-0123456789"
+      Jwt__ValidIssuer: "nur-tricenter-identity"
+      Jwt__ValidAudience: "nur-tricenter-clients"
+      Jwt__Lifetime: "3600"
+
+      # Consul self-registration. ServiceName is the gateway's public segment:
+      # http://localhost:15005/api/delivery-calendar/v1/...
+      ServiceRegistration__ServiceDiscoveryAddress: "http://nur-tricenter-consul:8500"
+      ServiceRegistration__ServiceName: "delivery-calendar"
+      ServiceRegistration__Host: "delivery-calendar-api"
+      ServiceRegistration__Port: "8080"
+
+      # The migrate job owns the schema; seed data is off (its plan ids don't exist in MS2).
+      Database__ApplyMigrationsOnStartup: "false"
+      Database__Seed: "false"
+      HttpsRedirection__Enabled: "false"
+      OpenApi__Enabled: "false"
+
+      # Real MS2, through the gateway (the platform's single entry point), as MS4's service
+      # account. nur-tricenter-local's start-stack script creates that account in identity.
+      Catalog__UseMock: "false"
+      Catalog__BaseUrl: "http://gateway:8080"
+      Identity__BaseUrl: "http://gateway:8080"
+      Identity__ServiceUserName: "ms4-service"
+      Identity__ServicePassword: "dev-only-ms4-service-password"
+    networks: [nur-tricenter-net]
+    depends_on:
+      db:
+        condition: service_healthy
+      consul:
+        condition: service_started
+      delivery-calendar-migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      # The aspnet runtime image has no curl; a bash TCP probe is the platform convention.
+      test: ["CMD-SHELL", "timeout 2 bash -c '</dev/tcp/127.0.0.1/8080' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  # RabbitMQ consumers (ms4.meal-plan-published, ms4.recipe-updated). Serves no HTTP, so it is not
+  # registered in Consul.
+  delivery-calendar-workerservice:
+    image: mcr.microsoft.com/dotnet/aspnet:10.0
+    container_name: nur-tricenter-delivery-calendar-workerservice
+    hostname: delivery-calendar-workerservice
+    working_dir: /app
+    command: ["dotnet", "delivery_schedule_management.WorkerService.dll"]
+    volumes:
+      - ./artifacts/bin/WorkerService/debug:/app:ro
+    environment:
+      <<: *ms4-database
+      DOTNET_ENVIRONMENT: Development
+      RabbitMqSettings__Host: "nur-tricenter-rabbitmq"
+      RabbitMqSettings__UserName: "guest"
+      RabbitMqSettings__Password: "guest"
+      RabbitMqSettings__VirtualHost: "/"
+      RabbitMqSettings__MaxRetryAttempts: "3"
+      RabbitMqSettings__RetryBaseDelayMilliseconds: "500"
+    networks: [nur-tricenter-net]
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      delivery-calendar-migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      # No pgrep in the image either: look for the worker's assembly in any process's cmdline.
+      test: ["CMD-SHELL", "grep -qs 'delivery_schedule_management.WorkerService' /proc/*/cmdline || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+networks:
+  nur-tricenter-net:
+    external: true

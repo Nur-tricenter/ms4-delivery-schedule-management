@@ -11,6 +11,11 @@
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="System.Security.Cryptography.Xml" />
+    <PackageReference Include="Consul" />
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+    <PackageReference Include="Nur.Tricenter.Integration" />
+    <PackageReference Include="Joseco.Communication.External.Contracts" />
+    <PackageReference Include="Joseco.Communication.External.RabbitMQ" />
   </ItemGroup>
 
   <ItemGroup>

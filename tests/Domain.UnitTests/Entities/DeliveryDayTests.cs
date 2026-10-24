@@ -76,7 +76,7 @@ public class DeliveryDayTests
         var farEnoughInPast = new DateTimeOffset(deliveryDate.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero).AddDays(-10);
 
         day.SetAddress(SampleAddress());
-        day.MarkReadyForProduction(new RecipeReference("recipe-1"), new PortionQuantity(2));
+        day.MarkReadyForProduction([new MenuItem("Lunch", 3, Guid.NewGuid(), "recipe-1", 2)]);
         day.ApplyDeliveryResult(DeliveryResult.Delivered, evidence: null, farEnoughInPast);
 
         Should.Throw<InvalidDeliveryDayTransitionException>(() => day.Cancel(farEnoughInPast));
@@ -90,7 +90,7 @@ public class DeliveryDayTests
         var farEnoughInPast = new DateTimeOffset(deliveryDate.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero).AddDays(-10);
 
         day.SetAddress(SampleAddress());
-        day.MarkReadyForProduction(new RecipeReference("recipe-1"), new PortionQuantity(2));
+        day.MarkReadyForProduction([new MenuItem("Lunch", 3, Guid.NewGuid(), "recipe-1", 2)]);
 
         Should.Throw<InvalidDeliveryDayTransitionException>(() => day.Reschedule(new DeliveryDate(deliveryDate.AddDays(5)), farEnoughInPast));
     }
@@ -101,7 +101,7 @@ public class DeliveryDayTests
         var day = CreateCalendarWithOneDay(new DateOnly(2026, 8, 10)).Days.First();
 
         Should.Throw<InvalidDeliveryDayTransitionException>(
-            () => day.MarkReadyForProduction(new RecipeReference("recipe-1"), new PortionQuantity(2)));
+            () => day.MarkReadyForProduction([new MenuItem("Lunch", 3, Guid.NewGuid(), "recipe-1", 2)]));
     }
 
     [Test]
@@ -112,7 +112,7 @@ public class DeliveryDayTests
         var now = new DateTimeOffset(deliveryDate.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero).AddDays(-10);
 
         day.SetAddress(SampleAddress());
-        day.MarkReadyForProduction(new RecipeReference("recipe-1"), new PortionQuantity(2));
+        day.MarkReadyForProduction([new MenuItem("Lunch", 3, Guid.NewGuid(), "recipe-1", 2)]);
 
         day.ApplyDeliveryResult(DeliveryResult.Delivered, evidence: null, now);
         Should.NotThrow(() => day.ApplyDeliveryResult(DeliveryResult.Delivered, evidence: null, now));

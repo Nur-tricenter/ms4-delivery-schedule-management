@@ -57,6 +57,9 @@ namespace delivery_schedule_management.Infrastructure.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("DayNumber")
+                        .HasColumnType("integer");
+
                     b.Property<int>("DeliveryCalendarId")
                         .HasColumnType("integer");
 
@@ -127,6 +130,57 @@ namespace delivery_schedule_management.Infrastructure.Data.Migrations
                     b.HasIndex("ProductionOrderId");
 
                     b.ToTable("ProductionOrderLines", (string)null);
+                });
+
+            modelBuilder.Entity("delivery_schedule_management.Infrastructure.Messaging.InboxMessage", b =>
+                {
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CorrelationId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTimeOffset>("MessageCreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MessageType")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTimeOffset>("ProcessedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("MessageId");
+
+                    b.HasIndex("ProcessedOn");
+
+                    b.ToTable("InboxMessages", (string)null);
+                });
+
+            modelBuilder.Entity("delivery_schedule_management.Infrastructure.Messaging.PlanCatalogEntry", b =>
+                {
+                    b.Property<Guid>("PlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("MealsPerDay")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("TotalDays")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("PlanId");
+
+                    b.ToTable("PlanCatalog", (string)null);
                 });
 
             modelBuilder.Entity("delivery_schedule_management.Domain.Entities.DeliveryCalendar", b =>
@@ -326,6 +380,48 @@ namespace delivery_schedule_management.Infrastructure.Data.Migrations
                                 .HasForeignKey("DeliveryDayId");
                         });
 
+                    b.OwnsMany("delivery_schedule_management.Domain.ValueObjects.MenuItem", "Menu", b1 =>
+                        {
+                            b1.Property<int>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("integer");
+
+                            NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b1.Property<int>("Id"));
+
+                            b1.Property<int>("DeliveryDayId")
+                                .HasColumnType("integer");
+
+                            b1.Property<string>("MealTime")
+                                .IsRequired()
+                                .HasMaxLength(64)
+                                .HasColumnType("character varying(64)");
+
+                            b1.Property<int>("MealTimeOrder")
+                                .HasColumnType("integer");
+
+                            b1.Property<int>("Rations")
+                                .HasColumnType("integer");
+
+                            b1.Property<Guid>("RecipeId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("RecipeName")
+                                .IsRequired()
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)");
+
+                            b1.HasKey("Id");
+
+                            b1.HasIndex("DeliveryDayId");
+
+                            b1.HasIndex("RecipeId");
+
+                            b1.ToTable("DeliveryDayMenuItems", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("DeliveryDayId");
+                        });
+
                     b.OwnsOne("delivery_schedule_management.Domain.ValueObjects.PortionQuantity", "Portions", b1 =>
                         {
                             b1.Property<int>("DeliveryDayId")
@@ -343,25 +439,6 @@ namespace delivery_schedule_management.Infrastructure.Data.Migrations
                                 .HasForeignKey("DeliveryDayId");
                         });
 
-                    b.OwnsOne("delivery_schedule_management.Domain.ValueObjects.RecipeReference", "RecipeRef", b1 =>
-                        {
-                            b1.Property<int>("DeliveryDayId")
-                                .HasColumnType("integer");
-
-                            b1.Property<string>("Value")
-                                .IsRequired()
-                                .HasMaxLength(200)
-                                .HasColumnType("character varying(200)")
-                                .HasColumnName("RecipeRef");
-
-                            b1.HasKey("DeliveryDayId");
-
-                            b1.ToTable("DeliveryDays");
-
-                            b1.WithOwner()
-                                .HasForeignKey("DeliveryDayId");
-                        });
-
                     b.Navigation("Address");
 
                     b.Navigation("Date")
@@ -369,9 +446,9 @@ namespace delivery_schedule_management.Infrastructure.Data.Migrations
 
                     b.Navigation("Evidence");
 
-                    b.Navigation("Portions");
+                    b.Navigation("Menu");
 
-                    b.Navigation("RecipeRef");
+                    b.Navigation("Portions");
                 });
 
             modelBuilder.Entity("delivery_schedule_management.Domain.Entities.ProductionOrder", b =>

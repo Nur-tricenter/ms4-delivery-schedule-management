@@ -13,7 +13,7 @@ public class RescheduleDeliveryDayCommandTests
     private static async Task<(FakeCalendarRepository Repo, int CalendarId, int DayId)> SeedCalendar()
     {
         var repository = new FakeCalendarRepository();
-        var createHandler = new CreateScheduleCommandHandler(repository, new FakeApplicationDbContext());
+        var createHandler = new CreateScheduleCommandHandler(repository, new FakeApplicationDbContext(), new FakePlanCatalog(), Microsoft.Extensions.Logging.Abstractions.NullLogger<CreateScheduleCommandHandler>.Instance);
 
         var created = await createHandler.Handle(
             new CreateScheduleCommand(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 15, new DateOnly(2026, 8, 10)),
@@ -30,7 +30,8 @@ public class RescheduleDeliveryDayCommandTests
         var handler = new RescheduleDeliveryDayCommandHandler(repository, new FakeApplicationDbContext(), clock);
 
         var result = await handler.Handle(
-            new RescheduleDeliveryDayCommand(calendarId, dayId, new DateOnly(2026, 8, 20)),
+            // Outside the calendar's own range (Aug 10–24): a date already held by another day is rejected.
+            new RescheduleDeliveryDayCommand(calendarId, dayId, new DateOnly(2026, 9, 1)),
             CancellationToken.None);
 
         result.DayId.ShouldBe(dayId);

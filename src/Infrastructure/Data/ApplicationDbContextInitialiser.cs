@@ -11,14 +11,38 @@ namespace delivery_schedule_management.Infrastructure.Data;
 
 public static class InitialiserExtensions
 {
-    public static async Task InitialiseDatabaseAsync(this WebApplication app)
+    public static async Task InitialiseDatabaseAsync(this WebApplication app, bool applyMigrations = true, bool seed = true)
     {
+        if (!applyMigrations && !seed)
+            return;
+
         using var scope = app.Services.CreateScope();
 
         var initialiser = scope.ServiceProvider.GetRequiredService<ApplicationDbContextInitialiser>();
 
-        await initialiser.InitialiseAsync();
-        await initialiser.SeedAsync();
+        if (applyMigrations)
+            await initialiser.InitialiseAsync();
+
+        if (seed)
+            await initialiser.SeedAsync();
+    }
+
+    /// <summary>
+    /// Backs the <c>--migrate</c> one-shot job: applies pending migrations and returns an exit code
+    /// (0 success, 1 failure) instead of starting the web host.
+    /// </summary>
+    public static async Task<int> MigrateDatabaseAndExitAsync(this WebApplication app)
+    {
+        try
+        {
+            await app.InitialiseDatabaseAsync(applyMigrations: true, seed: false);
+            return 0;
+        }
+        catch
+        {
+            // Already logged by ApplicationDbContextInitialiser.
+            return 1;
+        }
     }
 }
 
@@ -93,7 +117,7 @@ public class ApplicationDbContextInitialiser
 
         var tomorrowDay = tomorrowCalendar.Days.First();
         tomorrowDay.SetAddress(new DeliveryAddress("742 Evergreen Terrace", "Springfield", new Coordinates(10.5, -20.25)));
-        tomorrowDay.MarkReadyForProduction(new RecipeReference("recipe-demo-tomorrow"), new PortionQuantity(2));
+        tomorrowDay.MarkReadyForProduction(DemoMenu("tomorrow", 1, 2));
 
         var dayAfterTomorrow = tomorrowCalendar.Days.Skip(1).First();
         dayAfterTomorrow.SetAddress(new DeliveryAddress("123 Fake St", "Springfield", new Coordinates(11.0, -20.0)));
@@ -109,7 +133,7 @@ public class ApplicationDbContextInitialiser
 
         var deliveredDay = historyCalendar.Days.ElementAt(0);
         deliveredDay.SetAddress(new DeliveryAddress("100 5th Ave", "Metropolis", new Coordinates(5, 5)));
-        deliveredDay.MarkReadyForProduction(new RecipeReference("recipe-demo-delivered"), new PortionQuantity(3));
+        deliveredDay.MarkReadyForProduction(DemoMenu("delivered", 2, 3));
         deliveredDay.ApplyDeliveryResult(
             DeliveryResult.Delivered,
             new DeliveryEvidence(now.AddDays(-20), "https://example.com/evidence-delivered.jpg"),
@@ -117,7 +141,7 @@ public class ApplicationDbContextInitialiser
 
         var failedDay = historyCalendar.Days.ElementAt(1);
         failedDay.SetAddress(new DeliveryAddress("101 5th Ave", "Metropolis", new Coordinates(5.1, 5.1)));
-        failedDay.MarkReadyForProduction(new RecipeReference("recipe-demo-failed"), new PortionQuantity(1));
+        failedDay.MarkReadyForProduction(DemoMenu("failed", 3, 1));
         failedDay.ApplyDeliveryResult(DeliveryResult.Failed, null, now.AddDays(-19));
 
         // startDate + 29 days = today + 9 days — furthest available day in this calendar,
@@ -137,4 +161,10 @@ public class ApplicationDbContextInitialiser
 
         await _context.SaveChangesAsync();
     }
+
+    // Seed-only stand-in for an MS2 meal plan day: one lunch recipe with a fixed recipe id.
+    private static List<MenuItem> DemoMenu(string tag, int recipeNumber, int rations) =>
+    [
+        new MenuItem("Lunch", 3, Guid.Parse($"dddddddd-0000-0000-0000-{recipeNumber:D12}"), $"Demo recipe ({tag})", rations)
+    ];
 }

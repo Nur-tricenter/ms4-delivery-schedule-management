@@ -4,9 +4,12 @@ namespace delivery_schedule_management.Application.Calendars.Common;
 
 public record DeliveryDayDto(
     int Id,
+    int DayNumber,
     DateOnly Date,
     DayStatus Status,
     AddressDto? Address,
     TimeOnly? DeliveryHour,
-    string? RecipeRef,
-    int? Portions);
+    int? Portions,
+    IReadOnlyList<MenuItemDto> Menu);
+
+public record MenuItemDto(string MealTime, int MealTimeOrder, Guid RecipeId, string RecipeName, int Rations);

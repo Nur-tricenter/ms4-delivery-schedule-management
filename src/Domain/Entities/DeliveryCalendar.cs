@@ -35,7 +35,7 @@ public class DeliveryCalendar : BaseAuditableEntity
 
         for (var i = 0; i < duration.Days; i++)
         {
-            _days.Add(new DeliveryDay(startDate.AddDays(i)));
+            _days.Add(new DeliveryDay(i + 1, startDate.AddDays(i)));
         }
     }
 
