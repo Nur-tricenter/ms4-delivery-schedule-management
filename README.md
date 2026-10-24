@@ -2,8 +2,12 @@
 
 Backend microservice for delivery scheduling: creates patient delivery calendars, tracks per-day
 status through address assignment, catalog resolution, production, and delivery result. Pure
-backend — no frontend, no auth in this stage. Built with .NET Aspire + Clean Architecture, Postgres
-via EF Core.
+backend, no frontend. Built with .NET Aspire + Clean Architecture, Postgres via EF Core.
+
+Part of the Nur-Tricenter platform: registers in Consul as `delivery-calendar`, is reached through
+the API gateway at `/api/delivery-calendar/v1/...`, validates JWTs minted by nur-tricenter-identity,
+reads meal plans from MS2 (ms2-plans-and-recipes-catalog) and consumes MS2's RabbitMQ events. It
+also runs standalone under Aspire, with the MS2 catalog mocked. See [Run](#run).
 
 See [`CLAUDE.md`](./CLAUDE.md) for the full domain spec and implementation roadmap.
 See [`FLOWS.md`](./FLOWS.md) for every use case, its expected behavior, error scenarios, and edge
@@ -16,6 +20,9 @@ cases (48h rule, idempotency, state transitions).
 - EF Core 10 + Npgsql (Postgres)
 - MediatR (CQRS: Commands/Queries + Handlers)
 - FluentValidation (input validation, wired into the MediatR pipeline)
+- Nur-Tricenter shared kernels 1.1.0 (`Nur.Tricenter.Access`, `.Security`, `.Integration`) from
+  GitHub Packages — scopes, JWT validation, message contracts
+- Consul (service self-registration), RabbitMQ via `Joseco.Communication.External.RabbitMQ`
 - NUnit + Shouldly (tests)
 
 ## Project layout
@@ -24,8 +31,10 @@ cases (48h rule, idempotency, state transitions).
 src/
   Domain/          pure C# — aggregates, entities, value objects, domain services. No EF, no ASP.NET.
   Application/      MediatR commands/queries/handlers, ports (repository/clock/catalog interfaces), DTOs
-  Infrastructure/   EF Core DbContext, entity configurations, repository implementations, mocked catalog adapter
-  Api/              Minimal API endpoints, exception -> ProblemDetails mapping
+  Infrastructure/   EF Core DbContext, configurations, migrations, repositories; MS2 catalog adapters
+                    (HTTP + mock); Consul registration; RabbitMQ inbox, projections and consumers
+  Api/              Minimal API endpoints, JWT scopes, exception -> ProblemDetails mapping, --migrate job
+  WorkerService/    RabbitMQ consumer host (platform mode only)
   AppHost/           Aspire orchestration entry point (Postgres + Api)
   ServiceDefaults/   Aspire service defaults (health checks, telemetry, resilience)
   Shared/            cross-cutting constants (service/database names)
@@ -54,14 +63,15 @@ classDiagram
 
     class DeliveryDay {
         +int Id
+        +int DayNumber
         +DeliveryDate Date
         +DayStatus Status
         +DeliveryAddress Address
         +DeliveryEvidence Evidence
-        +RecipeReference RecipeRef
+        +MenuItem[] Menu
         +PortionQuantity Portions
         +SetAddress(address)
-        +MarkReadyForProduction(recipeRef, portions)
+        +MarkReadyForProduction(menu)
         +Reschedule(newDate, now)
         +Cancel(now)
         +ApplyDeliveryResult(result, evidence, now)
@@ -100,6 +110,15 @@ classDiagram
         <<ValueObject>>
         +double Latitude
         +double Longitude
+    }
+
+    class MenuItem {
+        <<ValueObject>>
+        +string MealTime
+        +int MealTimeOrder
+        +Guid RecipeId
+        +string RecipeName
+        +int Rations
     }
 
     class DeliveryEvidence {
@@ -153,7 +172,7 @@ classDiagram
 
     class ICatalogPort {
         <<interface>>
-        +GetDayResolutionAsync(planId, date, ct)
+        +GetDayMenuAsync(planId, dayNumber, ct)
     }
 
     class IClock {
@@ -165,6 +184,7 @@ classDiagram
     ProductionOrder "1" *-- "0..*" ProductionOrderLine : Lines
     DeliveryDay --> DeliveryAddress : address
     DeliveryDay --> DeliveryEvidence : evidence
+    DeliveryDay *-- "0..*" MenuItem : menu
     DeliveryDay --> DayStatus : status
     DeliveryCalendar --> CalendarStatus : status
     ProductionOrder --> ProductionOrderStatus : status
@@ -216,8 +236,11 @@ flowchart TD
 
     subgraph INFRA["Infrastructure"]
         DB[("Postgres")]
-        MOCK["MockCatalogPort\ndeterministic fixture"]
-        MS2["MS2 — Catalog\nfuture real HTTP"]
+        MOCK["MockCatalogPort\nstandalone + tests"]
+        HTTP["HttpCatalogPort\nplatform, service account ms4-service"]
+        MS2["MS2 — Catalog\nGET /api/catalog/v1/meal-plans/{id}\nvia gateway"]
+        MQ["RabbitMQ\nms4.meal-plan-published\nms4.recipe-updated"]
+        WRK["WorkerService\nidempotent inbox → projections"]
     end
 
     MS3 -->|"1 create calendar"| DC
@@ -233,7 +256,11 @@ flowchart TD
     IPOR  --- DB
 
     ICP --> MOCK
-    MOCK -.->|not yet wired| MS2
+    ICP --> HTTP
+    HTTP -->|"plan day by DayNumber"| MS2
+    MS2 -.->|events| MQ
+    MQ --> WRK
+    WRK --- DB
     ICL  -.->|"injects now"| DD
 ```
 
@@ -259,17 +286,20 @@ one `scope` claim per permission).
 ### On the Nur-Tricenter platform
 
 MS4 joins the platform through [`ms4.compose.yml`](./ms4.compose.yml), which
-`nur-tricenter-local/compose/docker-compose.yml` includes. Clone this repository as a sibling of the
-platform repositories:
+`nur-tricenter-local/compose/docker-compose.yml` includes. The repository lives in the org as
+[`Nur-tricenter/ms4-delivery-schedule-management`](https://github.com/Nur-tricenter/ms4-delivery-schedule-management)
+and must be cloned under that folder name, as a sibling of the platform repositories.
+nur-tricenter-local's `scripts/setup-project.ps1` (or `.sh`) clones all of them:
 
 ```
 nurtricenter/
-  nur-tricenter-local/          # orchestrator (compose, topology, scripts)
+  nur-tricenter-local/                  # orchestrator (compose, topology, scripts)
   nur-tricenter-api-gateway/
   nur-tricenter-identity/
   nur-tricenter-shared-kernels/
   ms2-plans-and-recipes-catalog/
-  delivery-schedule-management/ # this repository
+  ms4-delivery-schedule-management/     # this repository
+  nurtricenter-logistics-and-delivery/  # MS5 (needs its own .env, see its README)
 ```
 
 ```powershell
@@ -277,12 +307,13 @@ nurtricenter/
 setx NUGET_USERNAME <github-user>
 setx NUGET_TOKEN <token>
 
-nurtricenter/nur-tricenter-local/scripts/start-stack.ps1   # or start-stack.sh
+nurtricenter/nur-tricenter-local/scripts/setup-project.ps1   # clone everything (first time)
+nurtricenter/nur-tricenter-local/scripts/start-stack.ps1     # or start-stack.sh
 ```
 
 The script builds every service (MS4 included), starts Postgres/RabbitMQ/Consul, the gateway,
-identity, the catalog and MS4 (`--migrate` job → API → RabbitMQ worker), and creates MS4's service
-account `ms4-service` in identity. Then:
+identity, the catalog, MS4 (`--migrate` job → API → RabbitMQ worker) and MS5, and creates MS4's
+service account `ms4-service` (scope `catalog.mealPlan:read`) in identity. Then:
 
 - MS4 is reachable only through the gateway: `http://localhost:15005/api/delivery-calendar/v1/...`
 - Log in with `POST http://localhost:15005/api/identity-service/v1/auth/login` (`admin`/`admin`) and
@@ -430,7 +461,7 @@ Day status moves `Pending → Scheduled`. Returns `dayId` + address.
 
 `POST /api/v1/calendars/resolve-daily-catalog` — no body required.
 
-Finds all `Scheduled` days dated tomorrow, calls `ICatalogPort` (mocked — deterministic fixture), sets `RecipeRef`/`Portions`, moves each day to `ReadyForProduction`, and rebuilds the `ProductionOrder` for that date.
+Finds all `Scheduled` days dated tomorrow, calls `ICatalogPort` for each day's plan day (`DayNumber`), stores the `Menu` (meal times, recipes, rations) and `Portions` (total rations), moves each day to `ReadyForProduction`, and rebuilds the `ProductionOrder` for that date. Standalone the catalog is the deterministic mock; on the platform it is the real MS2 meal plan, so the plan id must exist there.
 
 Add `?date=2026-07-12` as a query param to target a specific date (default is tomorrow).
 
@@ -608,13 +639,11 @@ Each message passes through an idempotent inbox (`InboxMessages`), so redeliveri
 
 1. **MS5 does not yet call MS4.** The master architecture table has no row showing MS5 calling `PATCH /delivery-result`. Until MS5 is wired to call this endpoint, every delivery day stays stuck in `ReadyForProduction` permanently and delivery outcomes are never recorded. This is a gap in MS5's implementation, not in MS4.
 
-2. **MS4 ↔ MS2 contract needs reconciliation before going live.** Three conflicting shapes exist:
-   - This service expects `GET /catalog/plans/{id}/day/{date}` (day-specific, returns recipe + portions).
-   - The master table describes a plain `GET /catalog/plans/{id}` (existence check only, no recipe data).
-   - MS3 uses a separate batch endpoint `POST /catalog/plans/structure` for recipe resolution.
-   The correct shape must be agreed with the MS2 team before replacing `MockCatalogPort` with a real HTTP adapter, or the daily catalog job will call a path that MS2 doesn't expose.
+2. ~~**MS4 ↔ MS2 contract needs reconciliation.**~~ **Resolved:** MS4 uses the endpoint MS2 really exposes, `GET /api/catalog/v1/meal-plans/{id}`, and picks the plan day by `DayNumber`. The master table should be updated to say so.
 
 3. **`GET /calendars/{id}` is absent from the master table.** All other frontend-read endpoints appear in it. Low risk since it has no cross-service dependency, but the master table should be updated for completeness.
+
+4. **Object-level authorization (security).** Scopes check the *kind* of caller, not *ownership*: a token with `deliveryCalendar.calendar:edit` can edit any patient's days. Closing it needs a mapping from the identity token's `sub` to MS4's `PatientId`, which lives in MS1.
 
 See `CLAUDE.md` §5 "Cross-service integration gaps" for the full audit details.
 
@@ -661,7 +690,7 @@ El núcleo del sistema gira en torno a dos conceptos principales:
 
 **El Calendario de Entregas** (`DeliveryCalendar`) es el objeto raíz. Pertenece a un paciente, está asociado a un contrato y a un plan nutricional de MS2, tiene una duración de 15 o 30 días, y contiene una lista de días de entrega.
 
-**El Día de Entrega** (`DeliveryDay`) representa una entrega individual. Cada día tiene una fecha, un estado, y puede tener una dirección, una receta asignada, y evidencia de entrega. El día es la unidad mínima sobre la que se operan las acciones del paciente y del repartidor.
+**El Día de Entrega** (`DeliveryDay`) representa una entrega individual. Cada día tiene un número de día dentro del plan (`DayNumber`, del 1 al 15 o 30, fijo aunque se reprograme la fecha), una fecha, un estado, y puede tener una dirección, un menú (las recetas de cada tiempo de comida con sus raciones, tomado de MS2), y evidencia de entrega. El día es la unidad mínima sobre la que se operan las acciones del paciente y del repartidor.
 
 Existe también una **Orden de Producción** (`ProductionOrder`), que es una instantánea consolidada de todos los días listos para el día siguiente. Es lo que MS3 consulta para saber qué hay que cocinar y preparar.
 
@@ -673,7 +702,7 @@ Un día de entrega pasa por los siguientes estados, en orden:
 
 1. **Pending** — el día fue creado pero el paciente aún no ha puesto una dirección de entrega.
 2. **Scheduled** — el paciente registró su dirección. El día ya tiene destino.
-3. **ReadyForProduction** — un proceso diario consultó el catálogo de MS2 y asignó la receta y las porciones correspondientes. El día está incluido en la orden de producción.
+3. **ReadyForProduction** — un proceso diario consultó el plan en el catálogo de MS2 y asignó el menú de ese día del plan: recetas por tiempo de comida y raciones. El día está incluido en la orden de producción.
 4. **Delivered** o **Failed** — el repartidor (a través de MS5) confirmó el resultado de la entrega, con o sin evidencia fotográfica.
 5. **Cancelled** — en cualquier momento antes de que la entrega ocurra, el paciente o el operador puede cancelar el día. Una vez cancelado, no hay vuelta atrás.
 
@@ -719,7 +748,7 @@ Es el punto de entrada de todo el sistema. MS3 lo llama inmediatamente después 
 
 **Comportamiento especial — idempotencia:** si MS3 llama dos veces con el mismo `contractId` (reintento por fallo de red, por ejemplo), el sistema detecta que ya existe un calendario para ese contrato y devuelve el existente sin crear un duplicado. Mismo resultado, sin efectos secundarios.
 
-**Errores posibles:** `400` si la duración no es 15 ni 30, o si algún ID viene vacío.
+**Errores posibles:** `400` si la duración no es 15 ni 30, si algún ID viene vacío, o si la duración contradice la del plan publicado en MS2 (cuando MS4 ya recibió el evento de ese plan).
 
 ---
 
@@ -854,7 +883,7 @@ Es el cierre del ciclo. Cuando el repartidor termina una entrega, MS5 llama a es
 #### Endpoint interno — Resolución de catálogo
 `POST /api/v1/calendars/resolve-daily-catalog` · Caller: **ops / demo**
 
-No forma parte del contrato público de MS4. Es el disparador manual del job nocturno que, para cada día en estado `Scheduled` con fecha objetivo, consulta a MS2 para obtener la receta y las porciones, mueve el día a `ReadyForProduction`, y construye la `ProductionOrder` que el endpoint 6 luego devuelve.
+No forma parte del contrato público de MS4. Es el disparador manual del job nocturno que, para cada día en estado `Scheduled` con fecha objetivo, consulta a MS2 el plan nutricional, toma el menú del día del plan que corresponde (`DayNumber`), mueve el día a `ReadyForProduction`, y construye la `ProductionOrder` que el endpoint 6 luego devuelve.
 
 En producción este proceso correría automáticamente cada noche vía un scheduler. En esta etapa se expone como endpoint para poder demostrar el flujo completo sin depender de un cron job real. Acepta un parámetro `?date=` para apuntar a una fecha específica.
 
@@ -864,9 +893,13 @@ En producción este proceso correría automáticamente cada noche vía un schedu
 
 MS4 recibe llamadas de tres fuentes: de **MS3** para crear calendarios y consultar la orden del día siguiente, del **frontend del paciente** para gestionar direcciones, reprogramaciones y cancelaciones, y de **MS5** para registrar resultados de entrega.
 
-En sentido saliente, MS4 depende de **MS2** (el catálogo de planes) para obtener la receta y las porciones que corresponden a cada plan nutricional en una fecha dada. En esta etapa esa dependencia está simulada mediante un adaptador de prueba (`MockCatalogPort`) que devuelve datos fijos sin hacer ninguna llamada de red real. Antes de salir a producción, ese adaptador deberá reemplazarse por uno que llame al endpoint real de MS2, y el contrato exacto de esa llamada deberá acordarse con el equipo de MS2 porque actualmente existen tres versiones distintas en la documentación del sistema.
+Todas esas llamadas entran por el **API gateway** de la plataforma Nur-Tricenter, en `/api/delivery-calendar/v1/...`, y deben traer un token JWT emitido por el servicio de **identity**. Cada endpoint exige un permiso (scope) específico: por ejemplo, crear calendarios requiere `deliveryCalendar.calendar:create` y registrar resultados de entrega requiere `deliveryCalendar.deliveryResult:edit`. Sin token la respuesta es 401; con un token sin el permiso, 403.
 
-También vale la pena mencionar una brecha pendiente: MS5 aún no está implementado para llamar al endpoint de resultado de entrega de MS4. Hasta que eso ocurra, los días quedan en estado ReadyForProduction indefinidamente y el ciclo nunca se cierra. La solución está del lado de MS5, no de MS4.
+En sentido saliente, MS4 depende de **MS2** (el catálogo de planes). Para resolver el menú de cada día llama al endpoint real de MS2, `GET /api/catalog/v1/meal-plans/{id}`, a través del gateway, y toma el día del plan que corresponde por su número. Para esa llamada MS4 se autentica con su propia cuenta de servicio, `ms4-service`, que solo tiene permiso de lectura de planes. Cuando MS4 corre solo (con Aspire, o en las pruebas) esa dependencia se reemplaza por un adaptador simulado (`MockCatalogPort`) con datos fijos.
+
+Además, MS4 **escucha eventos** de MS2 por **RabbitMQ**, en un proceso aparte (`WorkerService`): cuando se publica un plan guarda una copia local de sus datos básicos (para rechazar un calendario cuya duración no coincide con el plan), y cuando se actualiza una receta refresca su nombre en los días de entrega abiertos. Cada mensaje pasa por una bandeja de entrada idempotente, así que un mensaje repetido no tiene efecto.
+
+Queda una brecha pendiente del lado de MS5: debe llamar al endpoint de resultado de entrega de MS4 para cerrar el ciclo. Mientras no lo haga, los días quedan en estado ReadyForProduction indefinidamente.
 
 ---
 
@@ -878,11 +911,16 @@ El microservicio está construido con **.NET 10** y usa **.NET Aspire** para orq
 
 - **Application**: define los casos de uso como comandos y consultas usando el patrón CQRS a través de MediatR. También define las interfaces (puertos) que la capa de infraestructura debe implementar: el repositorio de calendarios, el repositorio de órdenes de producción, el adaptador del catálogo y el reloj del sistema.
 
-- **Infrastructure**: implementa esos puertos usando Entity Framework Core contra PostgreSQL, incluyendo las migraciones de base de datos, los repositorios concretos y el adaptador simulado de MS2.
+- **Infrastructure**: implementa esos puertos usando Entity Framework Core contra PostgreSQL, incluyendo las migraciones de base de datos, los repositorios concretos, los adaptadores de MS2 (real y simulado), el registro en Consul y los consumidores de RabbitMQ.
 
 - **Api**: expone los endpoints como Minimal APIs de ASP.NET Core. Convierte los errores de dominio en respuestas HTTP semánticas: 400 para validación, 404 para recursos no encontrados, 409 para la regla de las 48 horas y 422 para transiciones de estado inválidas.
 
-La base de datos es **PostgreSQL**, gestionada completamente a través de contenedores Docker por Aspire. La interfaz de exploración de la API es **Scalar** (equivalente moderno de Swagger), accesible desde el dashboard de Aspire.
+El mismo código corre en dos modos, que solo cambian por configuración:
+
+- **Solo, con Aspire**: Aspire levanta su propio PostgreSQL en Docker, aplica las migraciones, carga datos de prueba y usa el catálogo simulado. La interfaz de exploración de la API es **Scalar** (equivalente moderno de Swagger), accesible desde el dashboard de Aspire.
+- **En la plataforma Nur-Tricenter**: el repositorio `nur-tricenter-local` levanta todo el ecosistema con Docker Compose (PostgreSQL, RabbitMQ y Consul compartidos, gateway, identity, MS2, MS4 y MS5). MS4 usa su propia base de datos dentro del PostgreSQL compartido, se registra en **Consul** como `delivery-calendar` para que el gateway lo encuentre, aplica su esquema con un contenedor de migración de una sola ejecución, y llama al MS2 real.
+
+Los permisos, la validación de tokens y los contratos de los mensajes vienen de los **shared kernels** de la plataforma, paquetes NuGet compartidos por todos los microservicios.
 
 ---
 
@@ -896,9 +934,11 @@ El proyecto tiene cuatro niveles de pruebas:
 
 **Pruebas de integración de infraestructura**: levantan un contenedor real de PostgreSQL a través de Aspire y verifican que los repositorios persisten y recuperan datos correctamente contra una base de datos real.
 
-**Pruebas funcionales de aceptación**: pruebas de extremo a extremo que verifican los siete criterios de aceptación del sistema —idempotencia de creación, regla de las 48 horas para cancelación y reprogramación, consulta de días activos para mañana, idempotencia del resultado de entrega— tanto a través del pipeline de MediatR directamente como a través de HTTP real, incluyendo la verificación de códigos de estado y cuerpos de error.
+**Pruebas funcionales de aceptación**: pruebas de extremo a extremo que verifican los siete criterios de aceptación del sistema —idempotencia de creación, regla de las 48 horas para cancelación y reprogramación, consulta de días activos para mañana, idempotencia del resultado de entrega— tanto a través del pipeline de MediatR directamente como a través de HTTP real, incluyendo la verificación de códigos de estado y cuerpos de error, y de los rechazos 401 y 403 por falta de token o de permiso.
 
-En total el proyecto cuenta con más de 60 pruebas automatizadas, todas en verde.
+También hay pruebas del adaptador real de MS2 (contra respuestas HTTP simuladas) y de la bandeja de entrada idempotente de RabbitMQ.
+
+En total el proyecto cuenta con 98 pruebas automatizadas, todas en verde.
 
 ---
 
@@ -918,7 +958,7 @@ La colección tiene cinco flujos organizados en orden de complejidad:
 
 **Flujo 5 — Errores de validación**: prueba los casos de error más básicos: duración inválida (7 en vez de 15 o 30) devuelve 400, un calendario inexistente devuelve 404, y coordenadas fuera de rango devuelven 400.
 
-Para ejecutar la demostración: importar el archivo en Postman, configurar la variable `baseUrl` con la URL que muestra el dashboard de Aspire para el recurso `webapi`, y usar el **Collection Runner** para correr todos los flujos en secuencia. Cada request muestra su resultado con aserciones en verde si el comportamiento es el esperado.
+Para ejecutar la demostración: importar el archivo en Postman, configurar la variable `baseUrl` (la URL que muestra el dashboard de Aspire para el recurso `webapi`, o `http://localhost:15005/api/delivery-calendar` en la plataforma), configurar la variable `token` con un token JWT válido (en la plataforma: iniciar sesión con `admin`/`admin` en `POST http://localhost:15005/api/identity-service/v1/auth/login` y copiar `accessToken`), y usar el **Collection Runner** para correr todos los flujos en secuencia. Cada request muestra su resultado con aserciones en verde si el comportamiento es el esperado.
 
 ---
 
@@ -926,4 +966,10 @@ Para ejecutar la demostración: importar el archivo en Postman, configurar la va
 
 El microservicio está completamente implementado y probado en todas las capas. Las siete etapas de implementación planificadas originalmente están terminadas: scaffolding, modelo de dominio, capa de aplicación, infraestructura, endpoints de API, datos de prueba y pruebas de aceptación.
 
-Los pendientes no son defectos de MS4 sino decisiones de integración que dependen de otros equipos: la conexión real con MS2 para resolver recetas, la implementación en MS5 de la llamada al endpoint de resultado de entrega, y la alineación de la tabla maestra de endpoints del sistema para que refleje correctamente todas las interacciones existentes.
+Además, MS4 ya está integrado a la plataforma Nur-Tricenter: vive en la organización como `Nur-tricenter/ms4-delivery-schedule-management`, se descubre por Consul, se accede por el gateway con tokens de identity, resuelve los menús contra el MS2 real y consume sus eventos por RabbitMQ.
+
+Los pendientes dependen de otros equipos:
+
+- **MS5** debe llamar al endpoint de resultado de entrega para cerrar el ciclo.
+- **Autorización por paciente**: hoy los permisos controlan qué tipo de cliente llama, pero no de quién es el calendario; un token con permiso de edición puede modificar el calendario de cualquier paciente. Cerrarlo requiere relacionar el usuario de identity con el `PatientId`, que vive en MS1.
+- La **tabla maestra de endpoints** del sistema debe actualizarse para reflejar el contrato real con MS2 y las llamadas de MS5 a MS4.
