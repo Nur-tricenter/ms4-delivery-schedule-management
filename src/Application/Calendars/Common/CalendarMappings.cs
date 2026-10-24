@@ -11,12 +11,16 @@ public static class CalendarMappings
     public static DeliveryDayDto ToDto(this DeliveryDay day) =>
         new(
             day.Id,
+            day.DayNumber,
             day.Date.Value,
             day.Status,
             day.Address?.ToDto(),
             day.DeliveryHour,
-            day.RecipeRef?.Value,
-            day.Portions?.Value);
+            day.Portions?.Value,
+            day.Menu
+                .OrderBy(item => item.MealTimeOrder)
+                .Select(item => new MenuItemDto(item.MealTime, item.MealTimeOrder, item.RecipeId, item.RecipeName, item.Rations))
+                .ToList());
 
     public static CalendarVm ToVm(this DeliveryCalendar calendar) =>
         new(

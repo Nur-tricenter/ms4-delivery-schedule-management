@@ -31,7 +31,7 @@ public class ApplyDeliveryResultCommandTests
             CancellationToken.None);
 
         var calendar = await repository.GetByIdAsync(created.CalendarId, CancellationToken.None);
-        calendar!.Days.First(d => d.Id == dayId).MarkReadyForProduction(new RecipeReference("recipe-1"), new PortionQuantity(2));
+        calendar!.Days.First(d => d.Id == dayId).MarkReadyForProduction([new MenuItem("Lunch", 3, Guid.NewGuid(), "recipe-1", 2)]);
 
         return (repository, dayId);
     }

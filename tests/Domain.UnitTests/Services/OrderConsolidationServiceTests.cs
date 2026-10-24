@@ -22,7 +22,7 @@ public class OrderConsolidationServiceTests
 
         var day = calendar.Days.First();
         day.SetAddress(SampleAddress());
-        day.MarkReadyForProduction(new RecipeReference("recipe-1"), new PortionQuantity(2));
+        day.MarkReadyForProduction([new MenuItem("Lunch", 3, Guid.NewGuid(), "recipe-1", 2)]);
 
         return calendar;
     }

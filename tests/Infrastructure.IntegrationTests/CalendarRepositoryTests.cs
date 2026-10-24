@@ -36,6 +36,50 @@ public class CalendarRepositoryTests : RepositoryTestBase
     }
 
     [Test]
+    public async Task ResolvedMenu_ShouldRoundTrip_AsOwnedCollection_WithDayNumber()
+    {
+        var recipeId = Guid.NewGuid();
+        var calendar = DeliveryCalendar.Create(
+            Guid.NewGuid(),
+            new ContractReference(Guid.NewGuid()),
+            new PlanReference(Guid.NewGuid()),
+            new PlanDuration(15),
+            new DeliveryDate(new DateOnly(2026, 8, 1)));
+        var day = calendar.Days.ElementAt(3);
+        day.SetAddress(new DeliveryAddress("Main St 1", "Springfield", new Coordinates(1, 1)));
+        day.MarkReadyForProduction(
+        [
+            new MenuItem("Breakfast", 1, Guid.NewGuid(), "Oats", 1),
+            new MenuItem("Lunch", 3, recipeId, "Quinoa bowl", 2)
+        ]);
+
+        await using (var context = IntegrationTestSetup.CreateContext())
+        {
+            new CalendarRepository(context).Add(calendar);
+            await context.SaveChangesAsync(CancellationToken.None);
+        }
+
+        // Rename in a separate context: replacing an owned-collection item must persist, not duplicate.
+        await using (var context = IntegrationTestSetup.CreateContext())
+        {
+            var loaded = await new CalendarRepository(context).GetByIdAsync(calendar.Id, CancellationToken.None);
+            loaded!.Days.Single(d => d.Id == day.Id).RenameRecipe(recipeId, "Quinoa bowl v2");
+            await context.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using (var context = IntegrationTestSetup.CreateContext())
+        {
+            var loaded = await new CalendarRepository(context).GetByIdAsync(calendar.Id, CancellationToken.None);
+            var loadedDay = loaded!.Days.Single(d => d.Id == day.Id);
+
+            loadedDay.DayNumber.ShouldBe(4);
+            loadedDay.Portions!.Value.ShouldBe(3);
+            loadedDay.Menu.Count.ShouldBe(2);
+            loadedDay.Menu.ShouldContain(m => m.RecipeId == recipeId && m.RecipeName == "Quinoa bowl v2" && m.Rations == 2);
+        }
+    }
+
+    [Test]
     public async Task GetByContractIdAsync_ShouldFindExistingCalendar_ForIdempotencyCheck()
     {
         var contractId = Guid.NewGuid();

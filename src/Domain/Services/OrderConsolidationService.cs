@@ -9,7 +9,7 @@ namespace delivery_schedule_management.Domain.Services;
 /// Builds or refreshes the <see cref="ProductionOrder"/> for a given delivery date from every
 /// <see cref="DeliveryDay"/>, across all calendars, that is <see cref="DayStatus.ReadyForProduction"/>
 /// for that date. Catalog resolution (<c>ICatalogPort</c>) happens earlier, outside this service —
-/// by the time consolidation runs, every eligible day already carries its recipe/portions.
+/// by the time consolidation runs, every eligible day already carries its menu and portions.
 /// </summary>
 public static class OrderConsolidationService
 {
