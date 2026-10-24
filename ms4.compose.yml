@@ -26,6 +26,14 @@
 x-ms4-database: &ms4-database
   ConnectionStrings__delivery-schedule-management-db: "Host=nur-tricenter-postgres;Port=5432;Database=ms4_delivery_calendar;Username=dev-only;Password=dev-only-password"
 
+# In Development, ASP.NET Core loads the build's static-web-assets manifest, which holds the HOST's
+# Windows paths; inside the Linux container they are not absolute and the host crashes on startup
+# ("The path must be absolute"). Pointing the manifest key at a missing file disables it. (The
+# catalog doesn't hit this only because it ships no static web assets.)
+x-ms4-web-host: &ms4-web-host
+  ASPNETCORE_ENVIRONMENT: Development
+  ASPNETCORE_STATICWEBASSETS: /nonexistent-staticwebassets.json
+
 services:
   # One-shot job: applies EF Core migrations, then exits. The API waits for it to COMPLETE, so the
   # schema is in place before the first request and two API replicas never race to migrate.
@@ -38,8 +46,7 @@ services:
     volumes:
       - ./artifacts/bin/Api/debug:/app:ro
     environment:
-      <<: *ms4-database
-      ASPNETCORE_ENVIRONMENT: Development
+      <<: [*ms4-database, *ms4-web-host]
       # --migrate never validates a token, but the host still composes the JWT handler.
       Jwt__SecretKey: "dev-only-signing-key-not-a-secret-0123456789"
     networks: [nur-tricenter-net]
@@ -57,8 +64,7 @@ services:
     volumes:
       - ./artifacts/bin/Api/debug:/app:ro
     environment:
-      <<: *ms4-database
-      ASPNETCORE_ENVIRONMENT: Development
+      <<: [*ms4-database, *ms4-web-host]
       ASPNETCORE_URLS: http://+:8080
 
       # These MUST equal identity's Jwt__* (identity.compose.yml). A mismatch is a 401 on every

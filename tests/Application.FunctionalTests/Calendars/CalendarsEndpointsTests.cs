@@ -301,6 +301,20 @@ public class CalendarsEndpointsTests : TestBase
         problem.Status.ShouldBe(StatusCodes.Status404NotFound);
     }
 
+    [Test]
+    public async Task PostSchedule_ShouldReturn400_NamingTheInvalidField()
+    {
+        using var client = CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/v1/schedule", new CreateScheduleRequest(
+            Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 7, DateOnly.FromDateTime(DateTime.UtcNow).AddDays(10)));
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
+        problem.ShouldNotBeNull();
+        problem.Errors.ShouldContainKey("Duration");
+    }
+
     // --- Platform security (Nur.Tricenter.Security) ---
 
     [Test]

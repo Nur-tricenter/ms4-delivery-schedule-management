@@ -239,14 +239,74 @@ flowchart TD
 
 ## Run
 
+MS4 runs in two modes from the same code, switched only by configuration.
+
+### Standalone (Aspire)
+
 ```bash
 dotnet run --project src/AppHost
 ```
 
 Opens the Aspire dashboard, starts a Postgres container, applies EF Core migrations, and starts the
-API. Find the API's Scalar reference (OpenAPI UI) from the dashboard's URL list for the `webapi`
-resource, or use `src/Api/Api.http` directly (VS Code REST Client / Visual Studio / Rider all run
-`.http` files).
+API with the mocked MS2 catalog (`Catalog:UseMock=true`). Find the API's Scalar reference (OpenAPI UI)
+from the dashboard's URL list for the `webapi` resource.
+
+Every endpoint requires a bearer JWT (see [Authentication](#authentication)). In standalone mode
+there is no identity service, so sign a token with the AppHost's dev key (`Parameters:jwt-secret` in
+`src/AppHost/appsettings.json`, issuer `nur-tricenter-identity`, audience `nur-tricenter-clients`,
+one `scope` claim per permission).
+
+### On the Nur-Tricenter platform
+
+MS4 joins the platform through [`ms4.compose.yml`](./ms4.compose.yml), which
+`nur-tricenter-local/compose/docker-compose.yml` includes. Clone this repository as a sibling of the
+platform repositories:
+
+```
+nurtricenter/
+  nur-tricenter-local/          # orchestrator (compose, topology, scripts)
+  nur-tricenter-api-gateway/
+  nur-tricenter-identity/
+  nur-tricenter-shared-kernels/
+  ms2-plans-and-recipes-catalog/
+  delivery-schedule-management/ # this repository
+```
+
+```powershell
+# NuGet feed for the Nur.Tricenter.* kernels (classic PAT with read:packages), once per machine:
+setx NUGET_USERNAME <github-user>
+setx NUGET_TOKEN <token>
+
+nurtricenter/nur-tricenter-local/scripts/start-stack.ps1   # or start-stack.sh
+```
+
+The script builds every service (MS4 included), starts Postgres/RabbitMQ/Consul, the gateway,
+identity, the catalog and MS4 (`--migrate` job → API → RabbitMQ worker), and creates MS4's service
+account `ms4-service` in identity. Then:
+
+- MS4 is reachable only through the gateway: `http://localhost:15005/api/delivery-calendar/v1/...`
+- Log in with `POST http://localhost:15005/api/identity-service/v1/auth/login` (`admin`/`admin`) and
+  send the `accessToken` as `Authorization: Bearer ...`.
+- `src/Api/Api.http` is set up for this mode (request "0. Login" feeds the token to the others).
+- Consul UI `http://localhost:8500` shows `delivery-calendar` with a passing `/health` check.
+
+## Authentication
+
+Tokens are minted by nur-tricenter-identity and validated here with the `Nur.Tricenter.Security`
+kernel. Each endpoint requires one scope (`Nur.Tricenter.Access` → `DeliveryCalendarPermission`):
+
+| Scope | Endpoints | Typical caller |
+|---|---|---|
+| `deliveryCalendar.calendar:create` | `POST /schedule` | MS3 |
+| `deliveryCalendar.productionOrder:read` | `GET /calendars/active-tomorrow` | MS3 |
+| `deliveryCalendar.calendar:read` | `GET /calendars/{id}` | Frontend |
+| `deliveryCalendar.calendar:edit` | `PUT /dates`, `POST /addresses`, `POST /cancel-day` | Frontend |
+| `deliveryCalendar.deliveryResult:edit` | `PATCH /days/{dayId}/delivery-result` | MS5 |
+| `deliveryCalendar.catalogResolution:manage` | `POST /calendars/resolve-daily-catalog` | ops |
+
+No token → `401`; token without the scope → `403`. The platform administrator's token carries every
+scope. `/health` and `/alive` are anonymous. Known gap: scopes check the *kind* of caller, not
+*ownership* — see CLAUDE.md §5.
 
 ## Test
 
@@ -265,11 +325,14 @@ EF Core tooling needs to match the `Microsoft.EntityFrameworkCore.Design` packag
 `dotnet tool update -g dotnet-ef`.
 
 ```bash
-# add a migration
-dotnet ef migrations add <Name> --project src/Infrastructure --startup-project src/Api --output-dir Data/Migrations
+# add a migration — the design-time host composes JWT validation, which refuses an empty key,
+# so give it any value:
+Jwt__SecretKey=design-time-only-key-0123456789-abcdef \
+  dotnet ef migrations add <Name> --project src/Infrastructure --startup-project src/Api --output-dir Data/Migrations
 
-# migrations apply automatically on `dotnet run --project src/AppHost` in Development
-# (ApplicationDbContextInitialiser calls Database.MigrateAsync() on startup)
+# Standalone: migrations apply automatically on `dotnet run --project src/AppHost` in Development
+# (Database:ApplyMigrationsOnStartup defaults to true there).
+# Platform: the one-shot `delivery-calendar-migrate` container runs `Api.dll --migrate` before the API starts.
 ```
 
 ## API
@@ -529,7 +592,17 @@ The daily catalog job (`POST /calendars/resolve-daily-catalog`) must run **befor
 
 | Dependency | Endpoint | Purpose | Current state |
 |---|---|---|---|
-| **MS2** (catalog) | `GET /catalog/plans/{id}/day/{date}` | Fetch recipe reference and portion count for a plan on a given date | **Mocked** — `MockCatalogPort` returns a deterministic fixture; no real HTTP call yet |
+| **MS2** (catalog) | `GET /api/catalog/v1/meal-plans/{id}` (via gateway) | Fetch the plan's composition and take plan day `DayNumber`'s menu (meal times, recipes, rations) | **Real** on the platform (`HttpCatalogPort`, service account `ms4-service`); mocked (`MockCatalogPort`) standalone and in tests |
+| **identity** | `POST /api/identity-service/v1/auth/login` (via gateway) | Service-account token for the MS2 call | Platform only |
+
+### Events MS4 consumes (RabbitMQ, `src/WorkerService`)
+
+| Queue | Event (MS2) | Effect in MS4 |
+|---|---|---|
+| `ms4.meal-plan-published` | `MealPlanPublished` | Projects the plan into `PlanCatalog`; `POST /schedule` rejects a duration that contradicts it (400) |
+| `ms4.recipe-updated` | `RecipeUpdated` | Refreshes the recipe-name snapshot on open delivery days |
+
+Each message passes through an idempotent inbox (`InboxMessages`), so redeliveries are no-ops.
 
 ### Known integration gaps (pending resolution upstream)
 
@@ -549,8 +622,8 @@ See `CLAUDE.md` §5 "Cross-service integration gaps" for the full audit details.
 
 ## Notes for local dev
 
-- `ICatalogPort` (outbound call to MS2) is mocked — `MockCatalogPort` returns deterministic fixture
-  data, no real network call.
+- Standalone, `ICatalogPort` (outbound call to MS2) is mocked — `MockCatalogPort` returns a
+  deterministic three-meal menu per plan day, no real network call (`Catalog:UseMock=true`).
 - Seed data loads automatically on first run against an empty database (`dotnet run --project
   src/AppHost`, Development environment only): 3 patients with fixed GUIDs
   (`aaaaaaaa-0000-0000-0000-000000000001/2/3`) covering `Pending`, `Scheduled`,
@@ -558,7 +631,7 @@ See `CLAUDE.md` §5 "Cross-service integration gaps" for the full audit details.
   tomorrow's day pre-consolidated into a `ProductionOrder`, so `GET
   /calendars/active-tomorrow` returns data without running the catalog job first. Seeding is
   skipped if the database already has any calendar.
-- No auth in this stage (confirmed decision, see `CLAUDE.md` §3.4).
+- Every endpoint requires a bearer JWT with its scope — see [Authentication](#authentication).
 
 ---
 

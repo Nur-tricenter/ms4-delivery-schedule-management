@@ -5,8 +5,13 @@
     "description": "Automated test flows for the MS4 Delivery Calendar microservice.\n\nEvery flow generates its own UUIDs and dates — no manual values to change between runs.\n\n**Before running:**\n1. Start the app: `dotnet run --project src/AppHost`\n2. Copy the API URL from the Aspire dashboard (webapi resource)\n3. Set the `baseUrl` collection variable to that URL\n\nRun flows individually or use the Postman Collection Runner to execute all flows in sequence.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "auth": {
+    "type": "bearer",
+    "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ]
+  },
   "variable": [
-    { "key": "baseUrl",              "value": "http://localhost:5000",  "description": "Set this to the API URL shown in the Aspire dashboard" },
+    { "key": "token",                "value": "",                       "description": "Bearer JWT from nur-tricenter-identity with the deliveryCalendar.* scopes. On the local platform: POST http://localhost:15005/api/identity-service/v1/auth/login (admin/admin) and paste accessToken. Every MS4 endpoint requires it." },
+    { "key": "baseUrl",              "value": "http://localhost:5000",  "description": "Standalone: the API URL shown in the Aspire dashboard. Platform: http://localhost:15005/api/delivery-calendar" },
     { "key": "calendarId",           "value": "" },
     { "key": "dayId_main",           "value": "" },
     { "key": "dayId_reschedule",     "value": "" },

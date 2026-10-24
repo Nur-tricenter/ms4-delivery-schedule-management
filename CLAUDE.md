@@ -26,7 +26,8 @@ Note: endpoint #2 serves a dual purpose per the original requirements table — 
 
 ### MS4 outbound dependency
 
-- `ICatalogPort` → `GET /catalog/plans/{id}/day/{date}` on MS2 (synchronous). At this stage: **mocked** (adapter with a fixture or HTTP against a stub). **Contract conflict flagged** — the org-wide master endpoint table describes a different, narrower shape for this call. See "Cross-service integration gaps" in §5 for the full comparison and what needs reconciling before real MS2 integration.
+- `ICatalogPort.GetDayMenuAsync(planId, dayNumber)` → MS2's real endpoint `GET /api/catalog/v1/meal-plans/{id}` (through the platform gateway, as service account `ms4-service` with `catalog.mealPlan:read`), filtered to `PlanDay.DayNumber == dayNumber`. MS2 has no per-date endpoint: plans are modelled by day **number**, so `DeliveryDay.DayNumber` (1..N, fixed at creation) is what MS4 sends. The original `GET /catalog/plans/{id}/day/{date}` never existed in MS2 and is superseded. `Catalog:UseMock=true` (Aspire, tests) keeps the fixture adapter.
+- All endpoints in the table above are served on the Nur-Tricenter platform at `/api/delivery-calendar/v1/...` (gateway prefix `/api/delivery-calendar`, from the Consul service name) and require a bearer JWT from nur-tricenter-identity — see §5 "Nur-Tricenter platform integration".
 
 ---
 
@@ -141,10 +142,10 @@ Verify against the already-defined criteria:
 ---
 
 ## 4. Out of scope at this stage (already agreed during the architecture phase)
-- A real message broker.
-- Service-to-service authentication.
-- Outbox pattern.
-- Event schema versioning (not applicable: this stage uses synchronous REST, not events).
+- ~~A real message broker.~~ Superseded by the platform integration: MS4 now **consumes** RabbitMQ events (see §5). It still publishes none.
+- ~~Service-to-service authentication.~~ Superseded: MS4 → MS2 calls authenticate as service account `ms4-service`.
+- Outbox pattern (MS4 publishes no events, so it has nothing to put in one).
+- Event schema versioning (contracts are shared via the `Nur.Tricenter.Integration` kernel package).
 
 ---
 
@@ -158,7 +159,7 @@ See also [`README.md`](./README.md) (how to run/test) and [`FLOWS.md`](./FLOWS.m
 1. MediatR (not manual handlers) — already wired in `Application/DependencyInjection.cs`.
 2. Minimal APIs via the `IEndpointGroup` pattern (`src/Api/Infrastructure/`), not Controllers.
 3. Daily job: **manual trigger endpoint** (`POST /api/v1/calendars/resolve-daily-catalog`), no `BackgroundService`. Not part of the public §0 contract — it's ops/demo tooling.
-4. No auth at this stage — confirmed, Identity was fully removed in Stage 0.
+4. ~~No auth at this stage.~~ Superseded by the platform integration: every endpoint requires a bearer JWT from nur-tricenter-identity with the endpoint's `deliveryCalendar.*` scope (ASP.NET Identity stays removed — MS4 only *validates* tokens).
 
 ### Technical gotchas already solved (don't repeat them)
 - **EF Core owned-type constructor binding doesn't support a nested navigation as a constructor parameter.** `DeliveryAddress` nests `Coordinates` as a ctor param — EF can't bind that via constructor binding. Fix applied: a private parameterless ctor + private setters on `DeliveryAddress` (same pattern already used by entities). If you add another VO that nests another owned VO, you'll hit the same issue.
@@ -195,6 +196,38 @@ cases use `DateTime.UtcNow`-relative dates rather than a fixed instant.
 - Manual test collection: `src/Api/Api.http`.
 - Seed data: `ApplicationDbContextInitialiser.TrySeedAsync` — 3 patients (fixed GUIDs `aaaaaaaa-...0001/2/3`) covering all `DayStatus` values except `InProduction`: Patient 1 all-`Pending`, Patient 2 has a `ReadyForProduction` day for tomorrow (pre-consolidated into a `ProductionOrder` so `active-tomorrow` has data immediately) plus a `Scheduled` day, Patient 3 has `Delivered`/`Failed`/`Cancelled` days. Guarded by `if (await _context.Calendars.AnyAsync()) return;` — only seeds an empty DB.
 
+### Nur-Tricenter platform integration (2026-10)
+
+MS4 runs in two modes from the same code, switched purely by configuration:
+
+| | Standalone (Aspire) | Platform (nur-tricenter-local) |
+|---|---|---|
+| Start | `dotnet run --project src/AppHost` | `nur-tricenter-local/scripts/start-stack.ps1` (includes `ms4.compose.yml`) |
+| Postgres | own container | shared `nur-tricenter-postgres`, DB `ms4_delivery_calendar` |
+| Consul | off (`ServiceRegistration:ServiceDiscoveryAddress` blank) | registers as `delivery-calendar` → gateway route `/api/delivery-calendar/**` |
+| Auth | JWT, dev key injected by AppHost (`Parameters:jwt-secret`) | JWT, same dev key as identity |
+| MS2 | `MockCatalogPort` (`Catalog:UseMock=true`) | `HttpCatalogPort` via gateway, service account `ms4-service` |
+| RabbitMQ | not used | `src/WorkerService` consumes `ms4.meal-plan-published`, `ms4.recipe-updated` |
+| Schema | migrate + seed on startup (Development) | `--migrate` one-shot job; seed off |
+
+**Platform pieces and where they live:**
+- Kernels: `Nur.Tricenter.Access` (scopes `DeliveryCalendarPermission`, added to the kernel in 1.1.0), `Nur.Tricenter.Security` (`AddSecurity`), `Nur.Tricenter.Integration` (message contracts). `Nur.Tricenter.Observability` is deliberately NOT used — ServiceDefaults already registers the same OTel pipeline. Feed: GitHub Packages (`NuGet.config`, needs `NUGET_USERNAME`/`NUGET_TOKEN`).
+- Scopes per endpoint: `Api/Endpoints/Calendars/Calendars.cs` (`RequireAuthorization`). `/health` and `/alive` are anonymous and mapped in every environment (Consul probes `/health`).
+- Consul: `Infrastructure/ServiceDiscovery/`. Inbox + projections + consumers: `Infrastructure/Messaging/`. MS2 adapter + service-account token: `Infrastructure/Catalog/`.
+- Platform compose fragment: `ms4.compose.yml` (bind-mounts `artifacts/bin/<Project>/debug` — this repo sets `ArtifactsPath`).
+
+**Domain changes the integration forced:** MS2 plans have several recipes per day, keyed by day number. `DeliveryDay` therefore has `DayNumber` (fixed at creation; rescheduling keeps it) and a `Menu` owned collection (`MenuItem`: meal time, recipe id/name, rations); `Portions` = total rations. `RecipeRef`/`RecipeReference` were removed.
+
+**Gotchas:**
+- **`Jwt:SecretKey` is mandatory at host build** (the kernel throws). Tests set it in `WebApiFactory`; `dotnet ef` needs `Jwt__SecretKey=<anything>` in the environment; build-time OpenAPI generation gets a throwaway key (`DependencyInjection.AddPlatformSecurity`).
+- **`--migrate` must be stripped from `args`** before `WebApplication.CreateBuilder` — the command-line config provider rejects a bare switch.
+- **Consumer decorators take the concrete inner consumer** (`IdempotentConsumer<T, TInner>`), never `IIntegrationMessageConsumer<T>`: Joseco registers the pipeline under that interface, so injecting it is a DI cycle.
+- **Npgsql only writes UTC `DateTimeOffset`s** — `InboxMessage`/`PlanCatalogEntry` normalise with `ToUniversalTime()`.
+- **Joseco.Communication.External.RabbitMQ 1.1.0 ignores `RabbitMqSettings:Port`** (broker must be on 5672). Queues/bindings are declared by nur-tricenter-local's `rabbitmq-definitions.json`, not here.
+- **Docker Compose 2.29** rejects differing declarations of the same external network across `include:`d files (`conflicts with imported resource`). Keep `ms4.compose.yml`'s `networks:` block byte-identical in meaning to the other fragments (`external: true`, no `name:`).
+
+**Known gap (security):** scopes gate *which kind of caller* may use an endpoint, not *whose* calendar it is. A token with `deliveryCalendar.calendar:edit` can edit any patient's days (broken object-level authorization). Closing it needs a mapping from the identity token's `sub` to MS4's `PatientId`, which the platform doesn't provide yet (patients live in MS1).
+
 ### Cross-service integration gaps (master endpoint-table audit, 2026-07-10)
 An audit of the org-wide microservice endpoint table (MS1-MS5, cross-service REST calls) against this
 repo's own §0 contract confirmed **MS4's implementation already satisfies every endpoint the master
@@ -209,14 +242,10 @@ unilaterally in this repo:
    `DeliveryDay` stays stuck in `ReadyForProduction`/`InProduction`. Not actionable from MS4's side —
    flag to whoever owns the master table / MS5.
 
-2. **MS4 ↔ MS2 outbound catalog contract has three conflicting shapes**: this repo's own §0 says
-   `GET /catalog/plans/{id}/day/{date}` (day-specific, returns recipe/portions); the master table's
-   MS4→MS2 row says plain `GET /catalog/plans/{id}` (same lightweight existence check MS1/MS3 use
-   elsewhere, no day param, no recipe/portion payload); a third row shows MS3 (not MS4) doing the real
-   batch recipe/portion resolution via `POST /catalog/plans/structure`. Currently harmless —
-   `ICatalogPort` is mocked (`Infrastructure/Catalog/MockCatalogPort.cs`, Stage 4 explicit scope, no
-   real HTTP call yet) — but **must be reconciled with MS2's team before wiring a real adapter**, or
-   `ResolveDailyCatalogCommand` will call a path MS2 doesn't expose.
+2. ~~**MS4 ↔ MS2 outbound catalog contract has three conflicting shapes.**~~ **Resolved** against
+   MS2's actual code (ms2-plans-and-recipes-catalog): none of the three documented shapes exists
+   there. MS4 now uses the endpoint MS2 really exposes, `GET /api/v1/meal-plans/{id}` (full
+   composition), and picks the plan day by `DayNumber`. The master table should be updated to say so.
 
 3. **Minor: `GET /calendars/{id}` (§0 endpoint #6) isn't listed in the master table**, unlike similar
    frontend-read endpoints for other services. Low risk (frontend-only, no cross-MS dependency,
