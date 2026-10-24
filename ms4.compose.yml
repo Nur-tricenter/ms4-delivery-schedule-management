@@ -4,10 +4,11 @@
 #  Included by nur-tricenter-local/compose/docker-compose.yml:
 #
 #    include:
-#      - path: ../../delivery-schedule-management/ms4.compose.yml
+#      - path: ../../ms4-delivery-schedule-management/ms4.compose.yml
 #
-#  so this repository must be cloned as a sibling of nur-tricenter-local (inside the same
-#  `nurtricenter/` folder as ms2-plans-and-recipes-catalog and nur-tricenter-identity).
+#  so this repository must be cloned as `ms4-delivery-schedule-management`, a sibling of
+#  nur-tricenter-local (inside the same `nurtricenter/` folder as ms2-plans-and-recipes-catalog
+#  and nur-tricenter-identity). nur-tricenter-local's setup-project script does that.
 #
 #  NOT declared here, deliberately: Postgres (`db`), RabbitMQ (`rabbitmq`) and Consul (`consul`).
 #  They belong to the platform (nur-tricenter-local/compose/docker-compose.infra.yml). This file
