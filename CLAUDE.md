@@ -15,7 +15,7 @@ All docs and code in this repository must be written in English.
 | # | Endpoint | Method | Client | Input | Output |
 |---|---|---|---|---|---|
 | 1 | `/api/v1/schedule` | POST | MS3 | contractId, patientId, planId, duration(15\|30), startDate | calendarId, days[] (empty, status=PENDING) |
-| 2 | `/api/v1/calendars/active-tomorrow` | GET | MS3 | (none / optional date) | Consolidated ProductionOrder: [{ packId, patientId, planId, hour, address, lat, long }] |
+| 2 | `/api/v1/calendars/active-tomorrow` | GET | MS3 | (none / optional date) | Consolidated ProductionOrder: [{ packId, patientId, planId, hour, address, lat, long, menu }] |
 | 3 | `/api/v1/calendars/{id}/dates` | PUT | Frontend (patient) | dayId, newDate | dayId, status (applies the 48h rule) |
 | 4 | `/api/v1/calendars/{id}/addresses` | POST | Frontend (patient) | dayId (or calendarId), address, lat, long | dayId, address |
 | 5 | `/api/v1/calendars/{id}/cancel-day` | POST | Frontend (patient) | dayId | dayId, status=CANCELLED |
