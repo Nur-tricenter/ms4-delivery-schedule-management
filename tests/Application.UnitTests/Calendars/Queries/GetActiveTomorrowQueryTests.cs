@@ -27,7 +27,7 @@ public class GetActiveTomorrowQueryTests
         var deliveryDate = new DateOnly(2026, 8, 10);
         var calendarRepository = new FakeCalendarRepository();
         var orderRepository = new FakeProductionOrderRepository();
-        var createHandler = new CreateScheduleCommandHandler(calendarRepository, new FakeApplicationDbContext());
+        var createHandler = new CreateScheduleCommandHandler(calendarRepository, new FakeApplicationDbContext(), new FakePlanCatalog(), Microsoft.Extensions.Logging.Abstractions.NullLogger<CreateScheduleCommandHandler>.Instance);
 
         var created = await createHandler.Handle(
             new CreateScheduleCommand(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 15, deliveryDate),

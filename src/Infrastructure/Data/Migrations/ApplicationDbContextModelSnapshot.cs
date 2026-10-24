@@ -132,6 +132,57 @@ namespace delivery_schedule_management.Infrastructure.Data.Migrations
                     b.ToTable("ProductionOrderLines", (string)null);
                 });
 
+            modelBuilder.Entity("delivery_schedule_management.Infrastructure.Messaging.InboxMessage", b =>
+                {
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CorrelationId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTimeOffset>("MessageCreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MessageType")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTimeOffset>("ProcessedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("MessageId");
+
+                    b.HasIndex("ProcessedOn");
+
+                    b.ToTable("InboxMessages", (string)null);
+                });
+
+            modelBuilder.Entity("delivery_schedule_management.Infrastructure.Messaging.PlanCatalogEntry", b =>
+                {
+                    b.Property<Guid>("PlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("MealsPerDay")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("TotalDays")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("PlanId");
+
+                    b.ToTable("PlanCatalog", (string)null);
+                });
+
             modelBuilder.Entity("delivery_schedule_management.Domain.Entities.DeliveryCalendar", b =>
                 {
                     b.OwnsOne("delivery_schedule_management.Domain.ValueObjects.PlanReference", "PlanId", b1 =>

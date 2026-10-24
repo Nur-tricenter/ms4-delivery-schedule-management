@@ -16,7 +16,7 @@ public class ResolveDailyCatalogCommandTests
         DateOnly startDate, int dayIndex = 0)
     {
         var calendarRepository = new FakeCalendarRepository();
-        var createHandler = new CreateScheduleCommandHandler(calendarRepository, new FakeApplicationDbContext());
+        var createHandler = new CreateScheduleCommandHandler(calendarRepository, new FakeApplicationDbContext(), new FakePlanCatalog(), Microsoft.Extensions.Logging.Abstractions.NullLogger<CreateScheduleCommandHandler>.Instance);
 
         var created = await createHandler.Handle(
             new CreateScheduleCommand(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 15, startDate),

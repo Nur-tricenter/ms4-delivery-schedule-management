@@ -13,7 +13,7 @@ public class SetDeliveryAddressCommandTests
     public async Task Handle_ShouldSetAddress_AndTransitionDayToScheduled()
     {
         var repository = new FakeCalendarRepository();
-        var createHandler = new CreateScheduleCommandHandler(repository, new FakeApplicationDbContext());
+        var createHandler = new CreateScheduleCommandHandler(repository, new FakeApplicationDbContext(), new FakePlanCatalog(), Microsoft.Extensions.Logging.Abstractions.NullLogger<CreateScheduleCommandHandler>.Instance);
         var created = await createHandler.Handle(
             new CreateScheduleCommand(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 15, new DateOnly(2026, 8, 10)),
             CancellationToken.None);

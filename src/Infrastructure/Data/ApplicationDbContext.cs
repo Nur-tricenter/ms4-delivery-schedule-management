@@ -1,6 +1,7 @@
 using System.Reflection;
 using delivery_schedule_management.Application.Common.Interfaces;
 using delivery_schedule_management.Domain.Entities;
+using delivery_schedule_management.Infrastructure.Messaging;
 using Microsoft.EntityFrameworkCore;
 
 namespace delivery_schedule_management.Infrastructure.Data;
@@ -12,6 +13,12 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<DeliveryCalendar> Calendars => Set<DeliveryCalendar>();
 
     public DbSet<ProductionOrder> ProductionOrders => Set<ProductionOrder>();
+
+    /// <summary>Integration messages already consumed (idempotent inbox).</summary>
+    public DbSet<InboxMessage> InboxMessages => Set<InboxMessage>();
+
+    /// <summary>Projection of MS2 meal plans (from <c>MealPlanPublished</c>).</summary>
+    public DbSet<PlanCatalogEntry> PlanCatalog => Set<PlanCatalogEntry>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

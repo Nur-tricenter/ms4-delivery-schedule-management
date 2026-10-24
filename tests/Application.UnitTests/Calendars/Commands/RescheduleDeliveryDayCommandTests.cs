@@ -13,7 +13,7 @@ public class RescheduleDeliveryDayCommandTests
     private static async Task<(FakeCalendarRepository Repo, int CalendarId, int DayId)> SeedCalendar()
     {
         var repository = new FakeCalendarRepository();
-        var createHandler = new CreateScheduleCommandHandler(repository, new FakeApplicationDbContext());
+        var createHandler = new CreateScheduleCommandHandler(repository, new FakeApplicationDbContext(), new FakePlanCatalog(), Microsoft.Extensions.Logging.Abstractions.NullLogger<CreateScheduleCommandHandler>.Instance);
 
         var created = await createHandler.Handle(
             new CreateScheduleCommand(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 15, new DateOnly(2026, 8, 10)),
