@@ -11,14 +11,38 @@ namespace delivery_schedule_management.Infrastructure.Data;
 
 public static class InitialiserExtensions
 {
-    public static async Task InitialiseDatabaseAsync(this WebApplication app)
+    public static async Task InitialiseDatabaseAsync(this WebApplication app, bool applyMigrations = true, bool seed = true)
     {
+        if (!applyMigrations && !seed)
+            return;
+
         using var scope = app.Services.CreateScope();
 
         var initialiser = scope.ServiceProvider.GetRequiredService<ApplicationDbContextInitialiser>();
 
-        await initialiser.InitialiseAsync();
-        await initialiser.SeedAsync();
+        if (applyMigrations)
+            await initialiser.InitialiseAsync();
+
+        if (seed)
+            await initialiser.SeedAsync();
+    }
+
+    /// <summary>
+    /// Backs the <c>--migrate</c> one-shot job: applies pending migrations and returns an exit code
+    /// (0 success, 1 failure) instead of starting the web host.
+    /// </summary>
+    public static async Task<int> MigrateDatabaseAndExitAsync(this WebApplication app)
+    {
+        try
+        {
+            await app.InitialiseDatabaseAsync(applyMigrations: true, seed: false);
+            return 0;
+        }
+        catch
+        {
+            // Already logged by ApplicationDbContextInitialiser.
+            return 1;
+        }
     }
 }
 

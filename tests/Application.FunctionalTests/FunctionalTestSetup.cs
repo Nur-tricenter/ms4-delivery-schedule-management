@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Nur.Tricenter.Access.DeliveryCalendar;
 
 namespace delivery_schedule_management.Application.FunctionalTests;
 
@@ -11,7 +12,21 @@ public class FunctionalTestSetup
     private static WebApiFactory? _factory;
     private static DistributedApplication? _app;
 
+    /// <summary>An HTTP client carrying a bearer token with every MS4 scope.</summary>
     internal static HttpClient CreateHttpClient() =>
+        CreateHttpClient(DeliveryCalendarPermission.PermissionsList.ToArray());
+
+    /// <summary>An HTTP client carrying a bearer token with exactly <paramref name="scopes"/>.</summary>
+    internal static HttpClient CreateHttpClient(params string[] scopes)
+    {
+        var client = CreateAnonymousHttpClient();
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", TestTokens.Create(scopes));
+        return client;
+    }
+
+    /// <summary>An HTTP client with no Authorization header.</summary>
+    internal static HttpClient CreateAnonymousHttpClient() =>
         (_factory ?? throw new InvalidOperationException("WebApiFactory not initialised.")).CreateClient();
 
     [OneTimeSetUp]
