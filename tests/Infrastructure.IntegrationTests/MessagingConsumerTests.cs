@@ -105,21 +105,28 @@ public class MessagingConsumerTests : RepositoryTestBase
         }
     }
 
-    private static async Task<int> SaveReadyDayAsync(bool cancel = false)
+    private static async Task<int> SaveReadyDayAsync(bool cancel = false, Guid? patientId = null) =>
+        (await SaveReadyDaysAsync(patientId ?? Guid.NewGuid(), [0], cancel))[0];
+
+    /// <summary>One calendar for <paramref name="patientId"/>; the days at <paramref name="dayIndexes"/> become ReadyForProduction.</summary>
+    private static async Task<int[]> SaveReadyDaysAsync(Guid patientId, int[] dayIndexes, bool cancel = false)
     {
         var calendar = DeliveryCalendar.Create(
-            Guid.NewGuid(), new ContractReference(Guid.NewGuid()), new PlanReference(Guid.NewGuid()),
+            patientId, new ContractReference(Guid.NewGuid()), new PlanReference(Guid.NewGuid()),
             new PlanDuration(15), new DeliveryDate(new DateOnly(2026, 8, 1)));
-        var day = calendar.Days.ElementAt(0);
-        day.SetAddress(new DeliveryAddress("Main St 1", "Springfield", new Coordinates(1, 1)));
-        day.MarkReadyForProduction([new MenuItem("Lunch", 3, Guid.NewGuid(), "Salmon", 2)]);
-        if (cancel)
-            day.Cancel(new DateTimeOffset(2026, 7, 1, 0, 0, 0, TimeSpan.Zero));
+        var days = dayIndexes.Select(i => calendar.Days.ElementAt(i)).ToList();
+        foreach (var day in days)
+        {
+            day.SetAddress(new DeliveryAddress("Main St 1", "Springfield", new Coordinates(1, 1)));
+            day.MarkReadyForProduction([new MenuItem("Lunch", 3, Guid.NewGuid(), "Salmon", 2)]);
+            if (cancel)
+                day.Cancel(new DateTimeOffset(2026, 7, 1, 0, 0, 0, TimeSpan.Zero));
+        }
 
         await using var context = IntegrationTestSetup.CreateContext();
         new CalendarRepository(context).Add(calendar);
         await context.SaveChangesAsync();
-        return day.Id;
+        return days.Select(d => d.Id).ToArray();
     }
 
     private static async Task HandleAsync<T, TConsumer>(T message, Func<Infrastructure.Data.ApplicationDbContext, TConsumer> create)
@@ -132,9 +139,9 @@ public class MessagingConsumerTests : RepositoryTestBase
         await consumer.HandleAsync(message);
     }
 
-    private static Task LinkAsync(Guid deliveryId, string packageId) =>
+    private static Task LinkAsync(Guid deliveryId, string packageId, string patientId = "p") =>
         HandleAsync(
-            new DeliveryAddedToRoute("corr-3", "ms5") { RouteId = Guid.NewGuid(), DeliveryId = deliveryId, PackageId = packageId, PatientId = "p" },
+            new DeliveryAddedToRoute("corr-3", "ms5") { RouteId = Guid.NewGuid(), DeliveryId = deliveryId, PackageId = packageId, PatientId = patientId },
             ctx => new DeliveryAddedToRouteConsumer(ctx, TimeProvider.System, NullLogger<DeliveryAddedToRouteConsumer>.Instance));
 
     private static Task CompleteAsync(Guid deliveryId) =>
@@ -206,6 +213,47 @@ public class MessagingConsumerTests : RepositoryTestBase
     public async Task DeliveryAddedToRoute_WithNonNumericPackageId_ShouldNotCreateALink()
     {
         await LinkAsync(Guid.NewGuid(), "manual-package-7");
+
+        await using var context = IntegrationTestSetup.CreateContext();
+        (await context.DeliveryRouteLinks.CountAsync()).ShouldBe(0);
+    }
+
+    [Test]
+    public async Task DeliveryAddedToRoute_WithMs3PackageGuid_ShouldLinkByPatient_AndCloseTheDay()
+    {
+        var patientId = Guid.NewGuid();
+        var dayId = await SaveReadyDayAsync(patientId: patientId);
+        var deliveryId = Guid.NewGuid();
+
+        await LinkAsync(deliveryId, Guid.NewGuid().ToString(), patientId.ToString());
+        await CompleteAsync(deliveryId);
+
+        (await StatusOfAsync(dayId)).ShouldBe(Domain.Enums.DayStatus.Delivered);
+    }
+
+    [Test]
+    public async Task DeliveryAddedToRoute_ByPatient_ShouldTakeTheEarliestDayNotLinkedYet()
+    {
+        var patientId = Guid.NewGuid();
+        var dayIds = await SaveReadyDaysAsync(patientId, [1, 0]);
+        var (laterDay, earlierDay) = (dayIds[0], dayIds[1]);
+        var (first, second) = (Guid.NewGuid(), Guid.NewGuid());
+
+        await LinkAsync(first, Guid.NewGuid().ToString(), patientId.ToString());
+        await LinkAsync(second, Guid.NewGuid().ToString(), patientId.ToString());
+
+        await using var context = IntegrationTestSetup.CreateContext();
+        (await context.DeliveryRouteLinks.SingleAsync(l => l.DeliveryId == first)).DayId.ShouldBe(earlierDay);
+        (await context.DeliveryRouteLinks.SingleAsync(l => l.DeliveryId == second)).DayId.ShouldBe(laterDay);
+    }
+
+    [Test]
+    public async Task DeliveryAddedToRoute_ByPatient_WithNoDayInProduction_ShouldNotCreateALink()
+    {
+        var patientId = Guid.NewGuid();
+        await SaveReadyDayAsync(cancel: true, patientId: patientId);
+
+        await LinkAsync(Guid.NewGuid(), Guid.NewGuid().ToString(), patientId.ToString());
 
         await using var context = IntegrationTestSetup.CreateContext();
         (await context.DeliveryRouteLinks.CountAsync()).ShouldBe(0);
