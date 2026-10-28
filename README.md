@@ -239,7 +239,7 @@ flowchart TD
         MOCK["MockCatalogPort\nstandalone + tests"]
         HTTP["HttpCatalogPort\nplatform, service account ms4-service"]
         MS2["MS2 — Catalog\nGET /api/catalog/v1/meal-plans/{id}\nvia gateway"]
-        MQ["RabbitMQ\nms4.meal-plan-published\nms4.recipe-updated"]
+        MQ["RabbitMQ\nms4.meal-plan-published\nms4.recipe-updated\nms4.delivery-added-to-route\nms4.delivery-completed\nms4.delivery-failed"]
         WRK["WorkerService\nidempotent inbox → projections"]
     end
 
@@ -632,12 +632,17 @@ The daily catalog job (`POST /calendars/resolve-daily-catalog`) must run **befor
 |---|---|---|
 | `ms4.meal-plan-published` | `MealPlanPublished` | Projects the plan into `PlanCatalog`; `POST /schedule` rejects a duration that contradicts it (400) |
 | `ms4.recipe-updated` | `RecipeUpdated` | Refreshes the recipe-name snapshot on open delivery days |
+| `ms4.delivery-added-to-route` | `DeliveryAddedToRoute` (MS5) | Links the MS5 `DeliveryId` to the delivery day named by `PackageId` (= MS4 `packId`) in `DeliveryRouteLinks`; a non-numeric `PackageId` is ignored |
+| `ms4.delivery-completed` | `DeliveryCompleted` (MS5) | Looks up the linked day and marks it `Delivered` (evidence = the event's `DeliveredAt`); same rule as `PATCH /delivery-result` |
+| `ms4.delivery-failed` | `DeliveryFailed` (MS5) | Marks the linked day `Failed` |
 
 Each message passes through an idempotent inbox (`InboxMessages`), so redeliveries are no-ops.
 
+The delivery consumers never fail on business grounds: an unlinked delivery, a missing day, or a day that can no longer take a result (e.g. cancelled) is logged and acknowledged, because a retry could not succeed. `PATCH /delivery-result` stays as the manual path.
+
 ### Known integration gaps (pending resolution upstream)
 
-1. **MS5 does not yet call MS4.** The master architecture table has no row showing MS5 calling `PATCH /delivery-result`. Until MS5 is wired to call this endpoint, every delivery day stays stuck in `ReadyForProduction` permanently and delivery outcomes are never recorded. This is a gap in MS5's implementation, not in MS4.
+1. **Delivery outcomes arrive as events, but only if `PackageId` is MS4's `packId`.** MS4 now consumes MS5's `DeliveryAddedToRoute` / `DeliveryCompleted` / `DeliveryFailed`. `DeliveryCompleted` and `DeliveryFailed` carry only `DeliveryId`, so MS4 can close a day only if `DeliveryAddedToRoute.PackageId` equals the day id. Today MS3's `PackageValidated.PackageId` is MS3's own GUID (ms3-gap-03), so until MS3 sends the `packId` and MS5 stores it, days stay in `ReadyForProduction`. The `ms4.delivery-*` queues must also exist in `nur-tricenter-local`'s `rabbitmq-definitions.json`.
 
 2. ~~**MS4 ↔ MS2 contract needs reconciliation.**~~ **Resolved:** MS4 uses the endpoint MS2 really exposes, `GET /api/catalog/v1/meal-plans/{id}`, and picks the plan day by `DayNumber`. The master table should be updated to say so.
 
@@ -899,7 +904,7 @@ En sentido saliente, MS4 depende de **MS2** (el catálogo de planes). Para resol
 
 Además, MS4 **escucha eventos** de MS2 por **RabbitMQ**, en un proceso aparte (`WorkerService`): cuando se publica un plan guarda una copia local de sus datos básicos (para rechazar un calendario cuya duración no coincide con el plan), y cuando se actualiza una receta refresca su nombre en los días de entrega abiertos. Cada mensaje pasa por una bandeja de entrada idempotente, así que un mensaje repetido no tiene efecto.
 
-Queda una brecha pendiente del lado de MS5: debe llamar al endpoint de resultado de entrega de MS4 para cerrar el ciclo. Mientras no lo haga, los días quedan en estado ReadyForProduction indefinidamente.
+MS4 también escucha los eventos de entrega de MS5 (entrega añadida a una ruta, completada y fallida) para cerrar cada día como Delivered o Failed. Queda pendiente que el identificador del paquete que MS5 recibe de MS3 sea el packId de MS4; mientras no lo sea, los días quedan en estado ReadyForProduction.
 
 ---
 

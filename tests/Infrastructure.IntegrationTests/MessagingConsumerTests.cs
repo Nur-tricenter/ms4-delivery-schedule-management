@@ -5,6 +5,7 @@ using delivery_schedule_management.Infrastructure.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Nur.Tricenter.Integration.Messages.Catalog;
+using Nur.Tricenter.Integration.Messages.Logistics;
 
 namespace delivery_schedule_management.Infrastructure.IntegrationTests;
 
@@ -102,5 +103,123 @@ public class MessagingConsumerTests : RepositoryTestBase
             loaded!.Days.Single(d => d.Id == openDay.Id).Menu.Single().RecipeName.ShouldBe("Grilled salmon");
             loaded.Days.Single(d => d.Id == closedDay.Id).Menu.Single().RecipeName.ShouldBe("Salmon");
         }
+    }
+
+    private static async Task<int> SaveReadyDayAsync(bool cancel = false)
+    {
+        var calendar = DeliveryCalendar.Create(
+            Guid.NewGuid(), new ContractReference(Guid.NewGuid()), new PlanReference(Guid.NewGuid()),
+            new PlanDuration(15), new DeliveryDate(new DateOnly(2026, 8, 1)));
+        var day = calendar.Days.ElementAt(0);
+        day.SetAddress(new DeliveryAddress("Main St 1", "Springfield", new Coordinates(1, 1)));
+        day.MarkReadyForProduction([new MenuItem("Lunch", 3, Guid.NewGuid(), "Salmon", 2)]);
+        if (cancel)
+            day.Cancel(new DateTimeOffset(2026, 7, 1, 0, 0, 0, TimeSpan.Zero));
+
+        await using var context = IntegrationTestSetup.CreateContext();
+        new CalendarRepository(context).Add(calendar);
+        await context.SaveChangesAsync();
+        return day.Id;
+    }
+
+    private static async Task HandleAsync<T, TConsumer>(T message, Func<Infrastructure.Data.ApplicationDbContext, TConsumer> create)
+        where T : Joseco.Communication.External.Contracts.Message.IntegrationMessage
+        where TConsumer : class, Joseco.Communication.External.Contracts.Services.IIntegrationMessageConsumer<T>
+    {
+        await using var context = IntegrationTestSetup.CreateContext();
+        var consumer = new IdempotentConsumer<T, TConsumer>(
+            create(context), context, TimeProvider.System, NullLogger<IdempotentConsumer<T, TConsumer>>.Instance);
+        await consumer.HandleAsync(message);
+    }
+
+    private static Task LinkAsync(Guid deliveryId, string packageId) =>
+        HandleAsync(
+            new DeliveryAddedToRoute("corr-3", "ms5") { RouteId = Guid.NewGuid(), DeliveryId = deliveryId, PackageId = packageId, PatientId = "p" },
+            ctx => new DeliveryAddedToRouteConsumer(ctx, TimeProvider.System, NullLogger<DeliveryAddedToRouteConsumer>.Instance));
+
+    private static Task CompleteAsync(Guid deliveryId) =>
+        HandleAsync(
+            new DeliveryCompleted("corr-4", "ms5") { DeliveryId = deliveryId, RouteId = Guid.NewGuid(), DeliveredAt = DateTime.UtcNow },
+            ctx => new DeliveryCompletedConsumer(ctx, NullLogger<DeliveryCompletedConsumer>.Instance));
+
+    private static async Task<Domain.Enums.DayStatus> StatusOfAsync(int dayId)
+    {
+        await using var context = IntegrationTestSetup.CreateContext();
+        var calendar = await new CalendarRepository(context).GetByDeliveryDayIdAsync(dayId, CancellationToken.None);
+        return calendar!.Days.Single(d => d.Id == dayId).Status;
+    }
+
+    [Test]
+    public async Task DeliveryCompleted_AfterLinking_ShouldMarkTheDayDelivered_WithEvidenceTimestamp()
+    {
+        var dayId = await SaveReadyDayAsync();
+        var deliveryId = Guid.NewGuid();
+
+        await LinkAsync(deliveryId, dayId.ToString());
+        await CompleteAsync(deliveryId);
+
+        await using var context = IntegrationTestSetup.CreateContext();
+        var loaded = await new CalendarRepository(context).GetByDeliveryDayIdAsync(dayId, CancellationToken.None);
+        var day = loaded!.Days.Single(d => d.Id == dayId);
+        day.Status.ShouldBe(Domain.Enums.DayStatus.Delivered);
+        day.Evidence.ShouldNotBeNull();
+    }
+
+    [Test]
+    public async Task DeliveryFailed_AfterLinking_ShouldMarkTheDayFailed()
+    {
+        var dayId = await SaveReadyDayAsync();
+        var deliveryId = Guid.NewGuid();
+
+        await LinkAsync(deliveryId, dayId.ToString());
+        await HandleAsync(
+            new DeliveryFailed("corr-5", "ms5") { DeliveryId = deliveryId, RouteId = Guid.NewGuid(), Reason = "Patient absent" },
+            ctx => new DeliveryFailedConsumer(ctx, TimeProvider.System, NullLogger<DeliveryFailedConsumer>.Instance));
+
+        (await StatusOfAsync(dayId)).ShouldBe(Domain.Enums.DayStatus.Failed);
+    }
+
+    [Test]
+    public async Task DeliveryCompleted_ReportedAgainWithNewMessageId_ShouldKeepTheDayDelivered()
+    {
+        var dayId = await SaveReadyDayAsync();
+        var deliveryId = Guid.NewGuid();
+        await LinkAsync(deliveryId, dayId.ToString());
+
+        await CompleteAsync(deliveryId);
+        await CompleteAsync(deliveryId);
+
+        (await StatusOfAsync(dayId)).ShouldBe(Domain.Enums.DayStatus.Delivered);
+    }
+
+    [Test]
+    public async Task DeliveryCompleted_ForUnlinkedDelivery_ShouldBeAcknowledgedWithoutChanges()
+    {
+        var dayId = await SaveReadyDayAsync();
+
+        await Should.NotThrowAsync(() => CompleteAsync(Guid.NewGuid()));
+
+        (await StatusOfAsync(dayId)).ShouldBe(Domain.Enums.DayStatus.ReadyForProduction);
+    }
+
+    [Test]
+    public async Task DeliveryAddedToRoute_WithNonNumericPackageId_ShouldNotCreateALink()
+    {
+        await LinkAsync(Guid.NewGuid(), "manual-package-7");
+
+        await using var context = IntegrationTestSetup.CreateContext();
+        (await context.DeliveryRouteLinks.CountAsync()).ShouldBe(0);
+    }
+
+    [Test]
+    public async Task DeliveryCompleted_ForACancelledDay_ShouldBeAcknowledgedAndLeaveTheDayCancelled()
+    {
+        var dayId = await SaveReadyDayAsync(cancel: true);
+        var deliveryId = Guid.NewGuid();
+        await LinkAsync(deliveryId, dayId.ToString());
+
+        await Should.NotThrowAsync(() => CompleteAsync(deliveryId));
+
+        (await StatusOfAsync(dayId)).ShouldBe(Domain.Enums.DayStatus.Cancelled);
     }
 }
