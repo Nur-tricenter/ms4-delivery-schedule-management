@@ -134,7 +134,7 @@ All flows in this category operate on a `DeliveryDay` inside an already-existing
 - **Actor**: MS3 (`GET /api/v1/calendars/active-tomorrow`), dual purpose: auxiliary query **and** the mechanism by which MS3 obtains the daily production order (replaces the async `ProductionOrderRequired` event).
 - **Input**: optional `date` (default: tomorrow relative to `IClock.Now`).
 - **Precondition**: assumes C.1 (`ResolveDailyCatalogCommand`) already ran for that date. **This query never triggers on-demand resolution.**
-- **Happy path**: reads the already-consolidated `ProductionOrder` for the date, returns its lines mapped to `{ packId, patientId, planId, hour, address, lat, long }`. `packId` maps to `DeliveryDayId` (there's no separate "pack" concept in the domain — it's the closest identifiable delivery unit, a design decision documented in `GetActiveTomorrowQuery.cs`).
+- **Happy path**: reads the already-consolidated `ProductionOrder` for the date, returns its lines mapped to `{ packId, patientId, planId, hour, address, lat, long, menu }`, where `menu` is the day's menu snapshot (meal times, recipes, rations). `packId` maps to `DeliveryDayId` (there's no separate "pack" concept in the domain — it's the closest identifiable delivery unit, a design decision documented in `GetActiveTomorrowQuery.cs`).
 - **No-data case**: if no `ProductionOrder` exists for the date (job hasn't run yet, or no days were eligible), returns an **empty list**, not an error.
 - **Content guarantee**: can only return days that were `ReadyForProduction` at the time consolidation ran — never `Pending`/`Scheduled`/`Cancelled` days.
 - **Test coverage**: `GetActiveTomorrowQueryTests`.

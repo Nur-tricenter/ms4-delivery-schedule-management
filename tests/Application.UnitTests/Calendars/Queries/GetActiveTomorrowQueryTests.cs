@@ -14,7 +14,7 @@ public class GetActiveTomorrowQueryTests
     [Test]
     public async Task Handle_ShouldReturnEmptyList_WhenNoProductionOrderExists()
     {
-        var handler = new GetActiveTomorrowQueryHandler(new FakeProductionOrderRepository(), new TestClock(DateTimeOffset.UtcNow));
+        var handler = new GetActiveTomorrowQueryHandler(new FakeProductionOrderRepository(), new FakeCalendarRepository(), new TestClock(DateTimeOffset.UtcNow));
 
         var result = await handler.Handle(new GetActiveTomorrowQuery(null), CancellationToken.None);
 
@@ -44,10 +44,12 @@ public class GetActiveTomorrowQueryTests
             Microsoft.Extensions.Logging.Abstractions.NullLogger<ResolveDailyCatalogCommandHandler>.Instance);
         await resolveHandler.Handle(new ResolveDailyCatalogCommand(deliveryDate), CancellationToken.None);
 
-        var queryHandler = new GetActiveTomorrowQueryHandler(orderRepository, resolveClock);
+        var queryHandler = new GetActiveTomorrowQueryHandler(orderRepository, calendarRepository, resolveClock);
         var result = await queryHandler.Handle(new GetActiveTomorrowQuery(deliveryDate), CancellationToken.None);
 
         result.Count.ShouldBe(1);
         result[0].PackId.ShouldBe(created.Days[0].Id);
+        result[0].Menu.ShouldNotBeEmpty();
+        result[0].Menu.ShouldAllBe(item => item.RecipeId != Guid.Empty && item.Rations > 0);
     }
 }

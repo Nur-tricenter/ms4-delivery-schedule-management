@@ -82,6 +82,7 @@ public class CalendarAcceptanceTests : TestBase
 
         result.Count.ShouldBe(1);
         result[0].PackId.ShouldBe(readyDayId);
+        result[0].Menu.ShouldNotBeEmpty();
 
         var calendarVm = await TestApp.SendAsync(new GetCalendarQuery(readyCalendar.CalendarId));
         calendarVm.Days.First(d => d.Id == readyDayId).Status.ShouldBe(DayStatus.ReadyForProduction);

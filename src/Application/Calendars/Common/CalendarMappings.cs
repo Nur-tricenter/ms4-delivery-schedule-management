@@ -8,6 +8,12 @@ public static class CalendarMappings
     public static AddressDto ToDto(this DeliveryAddress address) =>
         new(address.Street, address.City, address.References, address.Notes, address.Coordinates.Latitude, address.Coordinates.Longitude);
 
+    public static IReadOnlyList<MenuItemDto> ToMenuDto(this DeliveryDay day) =>
+        day.Menu
+            .OrderBy(item => item.MealTimeOrder)
+            .Select(item => new MenuItemDto(item.MealTime, item.MealTimeOrder, item.RecipeId, item.RecipeName, item.Rations))
+            .ToList();
+
     public static DeliveryDayDto ToDto(this DeliveryDay day) =>
         new(
             day.Id,
@@ -17,10 +23,7 @@ public static class CalendarMappings
             day.Address?.ToDto(),
             day.DeliveryHour,
             day.Portions?.Value,
-            day.Menu
-                .OrderBy(item => item.MealTimeOrder)
-                .Select(item => new MenuItemDto(item.MealTime, item.MealTimeOrder, item.RecipeId, item.RecipeName, item.Rations))
-                .ToList());
+            day.ToMenuDto());
 
     public static CalendarVm ToVm(this DeliveryCalendar calendar) =>
         new(

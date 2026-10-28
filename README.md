@@ -479,7 +479,7 @@ Returns **204 No Content**.
 
 `GET /api/v1/calendars/active-tomorrow`
 
-Returns all `ReadyForProduction` days for tomorrow, mapped to `{ packId, patientId, planId, hour, address, lat, long }`. Step 4 must have run first or this returns an empty list.
+Returns all `ReadyForProduction` days for tomorrow, mapped to `{ packId, patientId, planId, hour, address, lat, long, menu }` (`menu` = the day's menu snapshot). Step 4 must have run first or this returns an empty list.
 
 Add `?date=2026-07-12` to query a specific date.
 
@@ -850,10 +850,15 @@ Este es el endpoint de mayor impacto operativo. MS3 lo llama una vez por día (l
     "hour":      "09:00",
     "address":   "Av. Javier Prado 1234, Lima",
     "lat":       -12.0833,
-    "long":      -77.0167
+    "long":      -77.0167,
+    "menu": [
+      { "mealTime": "Lunch", "mealTimeOrder": 3, "recipeId": "uuid", "recipeName": "Silpancho", "rations": 1 }
+    ]
   }
 ]
 ```
+
+`menu` es la foto del menú del día que tomó `resolve-daily-catalog` (la misma de `GET /calendars/{id}`). Se agregó al final para que MS3 arme su orden de producción sin volver a pedirle a MS2 la composición del plan; los consumidores que no lo leen siguen funcionando.
 
 Con esa lista, MS3 sabe cuántas preparaciones hay que hacer, de qué plan es cada una, y a qué dirección enviarlas. Si un día no tiene dirección asignada (`Pending`) o no fue procesado por el job de catálogo (`Scheduled`), no aparece en esta lista.
 
