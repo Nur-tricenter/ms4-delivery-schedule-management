@@ -20,6 +20,9 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     /// <summary>Projection of MS2 meal plans (from <c>MealPlanPublished</c>).</summary>
     public DbSet<PlanCatalogEntry> PlanCatalog => Set<PlanCatalogEntry>();
 
+    /// <summary>MS5 delivery id -> MS4 delivery day (from <c>DeliveryAddedToRoute</c>).</summary>
+    public DbSet<DeliveryRouteLink> DeliveryRouteLinks => Set<DeliveryRouteLink>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

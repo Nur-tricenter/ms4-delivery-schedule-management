@@ -68,7 +68,7 @@ Note: endpoint #2 serves a dual purpose per the original requirements table — 
 **Invariant business rules**
 - A `DeliveryDay`'s date cannot be changed nor cancelled if `Date - Now < 48h`.
 - `POST /schedule` is idempotent by `contractId` (must not create a second calendar for the same contract).
-- A `DeliveryDay` only moves to `Delivered`/`Failed` via the MS5 endpoint, never manually.
+- A `DeliveryDay` only moves to `Delivered`/`Failed` through MS5: its endpoint or its `DeliveryCompleted`/`DeliveryFailed` events, never manually.
 
 **Outbound port**
 - `ICatalogPort.GetDayResolution(planId, date) → (RecipeRef, Portions)`
@@ -207,7 +207,7 @@ MS4 runs in two modes from the same code, switched purely by configuration:
 | Consul | off (`ServiceRegistration:ServiceDiscoveryAddress` blank) | registers as `delivery-calendar` → gateway route `/api/delivery-calendar/**` |
 | Auth | JWT, dev key injected by AppHost (`Parameters:jwt-secret`) | JWT, same dev key as identity |
 | MS2 | `MockCatalogPort` (`Catalog:UseMock=true`) | `HttpCatalogPort` via gateway, service account `ms4-service` |
-| RabbitMQ | not used | `src/WorkerService` consumes `ms4.meal-plan-published`, `ms4.recipe-updated` |
+| RabbitMQ | not used | `src/WorkerService` consumes `ms4.meal-plan-published`, `ms4.recipe-updated`, `ms4.delivery-added-to-route`, `ms4.delivery-completed`, `ms4.delivery-failed` |
 | Schema | migrate + seed on startup (Development) | `--migrate` one-shot job; seed off |
 
 **Platform pieces and where they live:**
@@ -237,10 +237,11 @@ unilaterally in this repo:
 1. **MS5 → MS4 `delivery-result` call (§0 endpoint #7) is missing from the master table entirely.**
    It's implemented here (`ApplyDeliveryResultCommand`) and backs a domain invariant (§1: a
    `DeliveryDay` only reaches `Delivered`/`Failed` via this call) — but the master table never shows
-   MS5 calling MS4 anywhere. Until the master architecture doc (and MS5's implementation) account for
-   this call, delivery outcomes never close the loop back into MS4 system-wide, and every
-   `DeliveryDay` stays stuck in `ReadyForProduction`/`InProduction`. Not actionable from MS4's side —
-   flag to whoever owns the master table / MS5.
+   MS5 calling MS4 anywhere. **Update (2026-10-28):** MS5 now publishes `DeliveryAddedToRoute`,
+   `DeliveryCompleted` and `DeliveryFailed`, and MS4 consumes them (`src/Infrastructure/Messaging/`,
+   table `DeliveryRouteLinks`). It only works end to end once `PackageId` is MS4's `packId` (MS3's
+   `PackageValidated` still sends its own GUID — ms3-gap-03) and the `ms4.delivery-*` queues exist in
+   `nur-tricenter-local`. Until then days stay in `ReadyForProduction`/`InProduction`.
 
 2. ~~**MS4 ↔ MS2 outbound catalog contract has three conflicting shapes.**~~ **Resolved** against
    MS2's actual code (ms2-plans-and-recipes-catalog): none of the three documented shapes exists

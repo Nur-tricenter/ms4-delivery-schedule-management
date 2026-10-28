@@ -67,6 +67,37 @@ public class PlanCatalogEntry
     }
 }
 
+/// <summary>
+/// Links an MS5 delivery to the MS4 delivery day it carries, from <c>DeliveryAddedToRoute</c>
+/// (<c>PackageId</c> = MS4's <c>packId</c> = <c>DeliveryDay.Id</c>). <c>DeliveryCompleted</c> and
+/// <c>DeliveryFailed</c> only carry the delivery id, so this is how they find their day.
+/// </summary>
+public class DeliveryRouteLink
+{
+    private DeliveryRouteLink() { } // EF Core
+
+    public DeliveryRouteLink(Guid deliveryId, Guid routeId, int dayId, DateTimeOffset linkedAt)
+    {
+        DeliveryId = deliveryId;
+        Reassign(routeId, dayId, linkedAt);
+    }
+
+    public Guid DeliveryId { get; private set; }
+
+    public Guid RouteId { get; private set; }
+
+    public int DayId { get; private set; }
+
+    public DateTimeOffset LinkedAt { get; private set; }
+
+    public void Reassign(Guid routeId, int dayId, DateTimeOffset linkedAt)
+    {
+        RouteId = routeId;
+        DayId = dayId;
+        LinkedAt = linkedAt.ToUniversalTime();
+    }
+}
+
 public class InboxMessageConfiguration : IEntityTypeConfiguration<InboxMessage>
 {
     public void Configure(EntityTypeBuilder<InboxMessage> builder)
@@ -88,6 +119,17 @@ public class PlanCatalogEntryConfiguration : IEntityTypeConfiguration<PlanCatalo
         builder.HasKey(p => p.PlanId);
         builder.Property(p => p.PlanId).ValueGeneratedNever();
         builder.Property(p => p.Name).HasMaxLength(200).IsRequired();
+    }
+}
+
+public class DeliveryRouteLinkConfiguration : IEntityTypeConfiguration<DeliveryRouteLink>
+{
+    public void Configure(EntityTypeBuilder<DeliveryRouteLink> builder)
+    {
+        builder.ToTable("DeliveryRouteLinks");
+        builder.HasKey(l => l.DeliveryId);
+        builder.Property(l => l.DeliveryId).ValueGeneratedNever();
+        builder.HasIndex(l => l.DayId);
     }
 }
 

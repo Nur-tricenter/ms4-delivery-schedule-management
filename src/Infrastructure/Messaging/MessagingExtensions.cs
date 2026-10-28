@@ -5,6 +5,7 @@ using Joseco.Communication.External.RabbitMQ;
 using Joseco.Communication.External.RabbitMQ.Services;
 using Microsoft.Extensions.Configuration;
 using Nur.Tricenter.Integration.Messages.Catalog;
+using Nur.Tricenter.Integration.Messages.Logistics;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -25,6 +26,9 @@ public static class MessagingExtensions
 {
     public const string MealPlanPublishedQueue = "ms4.meal-plan-published";
     public const string RecipeUpdatedQueue = "ms4.recipe-updated";
+    public const string DeliveryAddedToRouteQueue = "ms4.delivery-added-to-route";
+    public const string DeliveryCompletedQueue = "ms4.delivery-completed";
+    public const string DeliveryFailedQueue = "ms4.delivery-failed";
 
     public static IServiceCollection AddPlatformMessaging(this IServiceCollection services, IConfiguration configuration)
     {
@@ -37,6 +41,9 @@ public static class MessagingExtensions
 
         services.AddConsumer<MealPlanPublished, MealPlanPublishedConsumer>(MealPlanPublishedQueue);
         services.AddConsumer<RecipeUpdated, RecipeUpdatedConsumer>(RecipeUpdatedQueue);
+        services.AddConsumer<DeliveryAddedToRoute, DeliveryAddedToRouteConsumer>(DeliveryAddedToRouteQueue);
+        services.AddConsumer<DeliveryCompleted, DeliveryCompletedConsumer>(DeliveryCompletedQueue);
+        services.AddConsumer<DeliveryFailed, DeliveryFailedConsumer>(DeliveryFailedQueue);
 
         return services;
     }

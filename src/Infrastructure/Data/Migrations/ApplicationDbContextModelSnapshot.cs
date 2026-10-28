@@ -132,6 +132,27 @@ namespace delivery_schedule_management.Infrastructure.Data.Migrations
                     b.ToTable("ProductionOrderLines", (string)null);
                 });
 
+            modelBuilder.Entity("delivery_schedule_management.Infrastructure.Messaging.DeliveryRouteLink", b =>
+                {
+                    b.Property<Guid>("DeliveryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DayId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("LinkedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RouteId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("DeliveryId");
+
+                    b.HasIndex("DayId");
+
+                    b.ToTable("DeliveryRouteLinks", (string)null);
+                });
+
             modelBuilder.Entity("delivery_schedule_management.Infrastructure.Messaging.InboxMessage", b =>
                 {
                     b.Property<Guid>("MessageId")

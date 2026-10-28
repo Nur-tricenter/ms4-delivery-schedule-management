@@ -107,7 +107,7 @@ All flows in this category operate on a `DeliveryDay` inside an already-existing
 
 ### D.1 — Apply delivery result (`ApplyDeliveryResultCommand`)
 
-- **Actor**: MS5, exclusively (`PATCH /api/v1/calendars/days/{dayId}/delivery-result`).
+- **Actor**: MS5, exclusively — through `PATCH /api/v1/calendars/days/{dayId}/delivery-result`, or through its `DeliveryCompleted` / `DeliveryFailed` events (`ms4.delivery-completed` / `ms4.delivery-failed`, WorkerService). The event path resolves the day via `DeliveryRouteLinks`, filled from `DeliveryAddedToRoute` (`PackageId` = MS4 `packId`), applies the same `DeliveryDay.ApplyDeliveryResult` rule (evidence = `DeliveredAt` only), and logs + acknowledges instead of failing when the delivery is unlinked, the day is gone, or the transition is invalid (e.g. cancelled day).
 - **Input**: `dayId`, `result` (`Delivered`|`Failed`), `photoUrl?`, `signatureUrl?`.
 - **Precondition**: day in `ReadyForProduction` or `InProduction`.
 - **Happy path**: day moves to `Delivered` or `Failed` depending on `result`. If `photoUrl` or `signatureUrl` is provided, a `DeliveryEvidence` (timestamp = `IClock.Now`) is built and stored on the day.
@@ -115,7 +115,7 @@ All flows in this category operate on a `DeliveryDay` inside an already-existing
   - `dayId` doesn't exist (lookup is by `dayId` only — the endpoint doesn't receive `calendarId` per the contract) → `NotFoundException` → **404**.
   - Day in a status other than `ReadyForProduction`/`InProduction` **and** the requested result differs from the current state → `InvalidDeliveryDayTransitionException` → **422**. Example: requesting `Delivered` on a `Pending` or `Cancelled` day.
 - **Idempotency — the central rule of this flow**: calling it twice with the **same** `result` on a day already in that target status is a **silent no-op** — returns the current state without throwing, doesn't touch `Evidence` again. This is what guarantees that MS5 retries (timeouts, redelivered events) don't break state. If a **different** `result` is requested than what's already applied (e.g. day already `Delivered`, requesting `Failed`) → `InvalidDeliveryDayTransitionException` (not a valid result change, it's terminal).
-- **Never reached via any other path** — explicit domain invariant in `CLAUDE.md`: only this endpoint can perform this transition to `Delivered`/`Failed`.
+- **Never reached via any other path** — explicit domain invariant in `CLAUDE.md`: only MS5 (the endpoint or its delivery events) can perform this transition to `Delivered`/`Failed`.
 - **Test coverage**: `ApplyDeliveryResultCommandTests` (includes an explicit identical-double-call case).
 
 ---
