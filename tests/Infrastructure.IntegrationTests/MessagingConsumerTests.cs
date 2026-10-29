@@ -132,12 +132,9 @@ public class MessagingConsumerTests : RepositoryTestBase
         await consumer.HandleAsync(message);
     }
 
-    private static Task LinkAsync(Guid deliveryId, string packageId, int? deliveryDayId = null) =>
+    private static Task LinkAsync(Guid deliveryId, string packageId) =>
         HandleAsync(
-            new DeliveryAddedToRoute("corr-3", "ms5")
-            {
-                RouteId = Guid.NewGuid(), DeliveryId = deliveryId, PackageId = packageId, PatientId = "p", DeliveryDayId = deliveryDayId
-            },
+            new DeliveryAddedToRoute("corr-3", "ms5") { RouteId = Guid.NewGuid(), DeliveryId = deliveryId, PackageId = packageId, PatientId = "p" },
             ctx => new DeliveryAddedToRouteConsumer(ctx, TimeProvider.System, NullLogger<DeliveryAddedToRouteConsumer>.Instance));
 
     private static Task CompleteAsync(Guid deliveryId) =>
@@ -203,19 +200,6 @@ public class MessagingConsumerTests : RepositoryTestBase
         await Should.NotThrowAsync(() => CompleteAsync(Guid.NewGuid()));
 
         (await StatusOfAsync(dayId)).ShouldBe(Domain.Enums.DayStatus.ReadyForProduction);
-    }
-
-    [Test]
-    public async Task DeliveryCompleted_AfterLinkingByDeliveryDayId_ShouldMarkTheDayDelivered()
-    {
-        // Packages from MS3's package-validated carry MS3's own GUID as PackageId; the day comes in DeliveryDayId.
-        var dayId = await SaveReadyDayAsync();
-        var deliveryId = Guid.NewGuid();
-
-        await LinkAsync(deliveryId, Guid.NewGuid().ToString(), deliveryDayId: dayId);
-        await CompleteAsync(deliveryId);
-
-        (await StatusOfAsync(dayId)).ShouldBe(Domain.Enums.DayStatus.Delivered);
     }
 
     [Test]

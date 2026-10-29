@@ -62,9 +62,8 @@ public sealed class RecipeUpdatedConsumer(
 
 /// <summary>
 /// <c>ms4.delivery-added-to-route</c> -> remembers which MS4 delivery day an MS5 delivery carries.
-/// The day is <c>DeliveryDayId</c> (MS4's <c>packId</c>, carried from MS3's <c>PackageValidated</c> since
-/// kernel 1.4.0). Without it, a <c>PackageId</c> that is an integer is the <c>packId</c> of a package
-/// loaded into MS5 by hand; anything else didn't come from MS4, so it is ignored.
+/// MS5 sets <c>PackageId</c> to MS4's <c>packId</c> (the <c>DeliveryDay.Id</c>); a value that isn't an
+/// integer means the package didn't come from MS4 (e.g. loaded by hand), so it is ignored.
 /// </summary>
 public sealed class DeliveryAddedToRouteConsumer(
     ApplicationDbContext context,
@@ -73,12 +72,9 @@ public sealed class DeliveryAddedToRouteConsumer(
 {
     public async Task HandleAsync(DeliveryAddedToRoute message, CancellationToken cancellationToken = default)
     {
-        int dayId;
-        if (message.DeliveryDayId is { } deliveryDayId)
-            dayId = deliveryDayId;
-        else if (!int.TryParse(message.PackageId, out dayId))
+        if (!int.TryParse(message.PackageId, out var dayId))
         {
-            logger.LogWarning("Delivery {DeliveryId}: no delivery day id and package id '{PackageId}' is not an MS4 pack id; not linked.",
+            logger.LogWarning("Delivery {DeliveryId}: package id '{PackageId}' is not an MS4 pack id; not linked.",
                 message.DeliveryId, message.PackageId);
             return;
         }
