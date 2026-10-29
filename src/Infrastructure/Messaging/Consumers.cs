@@ -62,23 +62,73 @@ public sealed class RecipeUpdatedConsumer(
 
 /// <summary>
 /// <c>ms4.delivery-added-to-route</c> -> remembers which MS4 delivery day an MS5 delivery carries.
-/// MS5 sets <c>PackageId</c> to MS4's <c>packId</c> (the <c>DeliveryDay.Id</c>); a value that isn't an
-/// integer means the package didn't come from MS4 (e.g. loaded by hand), so it is ignored.
 /// </summary>
+/// <remarks>
+/// Two ways to find the day:
+/// <list type="number">
+/// <item><c>PackageId</c> is MS4's <c>packId</c> (the <c>DeliveryDay.Id</c>): the package was loaded
+/// into MS5 with the id from <c>active-tomorrow</c>.</item>
+/// <item>Otherwise, by patient. Packages that reach MS5 through MS3's <c>package-validated</c> carry
+/// MS3's own package GUID, because that contract has no field for MS4's <c>packId</c>. The day is
+/// then the patient's earliest day in production (<c>ReadyForProduction</c>/<c>InProduction</c>) that
+/// no other delivery is linked to. A patient has at most one such day per delivery date, so this is
+/// unambiguous as long as packages are dispatched in date order.</item>
+/// </list>
+/// A message matching neither (e.g. a package loaded by hand for an unknown patient) is ignored.
+/// </remarks>
 public sealed class DeliveryAddedToRouteConsumer(
     ApplicationDbContext context,
     TimeProvider timeProvider,
     ILogger<DeliveryAddedToRouteConsumer> logger) : IIntegrationMessageConsumer<DeliveryAddedToRoute>
 {
+    private static readonly DayStatus[] InProductionStatuses = [DayStatus.ReadyForProduction, DayStatus.InProduction];
+
     public async Task HandleAsync(DeliveryAddedToRoute message, CancellationToken cancellationToken = default)
     {
-        if (!int.TryParse(message.PackageId, out var dayId))
+        int? dayId = int.TryParse(message.PackageId, out var packId)
+            ? packId
+            : await FindDayByPatientAsync(message, cancellationToken);
+
+        if (dayId is null)
         {
-            logger.LogWarning("Delivery {DeliveryId}: package id '{PackageId}' is not an MS4 pack id; not linked.",
-                message.DeliveryId, message.PackageId);
+            logger.LogWarning(
+                "Delivery {DeliveryId}: package '{PackageId}' of patient '{PatientId}' matches no MS4 delivery day; not linked.",
+                message.DeliveryId, message.PackageId, message.PatientId);
             return;
         }
 
+        await LinkAsync(message, dayId.Value, cancellationToken);
+    }
+
+    private async Task<int?> FindDayByPatientAsync(DeliveryAddedToRoute message, CancellationToken cancellationToken)
+    {
+        if (!Guid.TryParse(message.PatientId, out var patientId))
+            return null;
+
+        var linkedDays = context.DeliveryRouteLinks
+            .Where(l => l.DeliveryId != message.DeliveryId)
+            .Select(l => l.DayId);
+
+        var candidates = await context.Calendars
+            .Where(c => c.PatientId == patientId)
+            .SelectMany(c => c.Days)
+            .Where(d => InProductionStatuses.Contains(d.Status) && !linkedDays.Contains(d.Id))
+            .Select(d => new { d.Id, Date = d.Date.Value })
+            .ToListAsync(cancellationToken);
+
+        var day = candidates.OrderBy(d => d.Date).FirstOrDefault();
+        if (day is not null)
+        {
+            logger.LogInformation(
+                "Delivery {DeliveryId}: package '{PackageId}' is not an MS4 pack id; matched by patient {PatientId} to day {DayId} ({Date}).",
+                message.DeliveryId, message.PackageId, patientId, day.Id, day.Date);
+        }
+
+        return day?.Id;
+    }
+
+    private async Task LinkAsync(DeliveryAddedToRoute message, int dayId, CancellationToken cancellationToken)
+    {
         var now = timeProvider.GetUtcNow();
         var link = await context.DeliveryRouteLinks.FirstOrDefaultAsync(l => l.DeliveryId == message.DeliveryId, cancellationToken);
 

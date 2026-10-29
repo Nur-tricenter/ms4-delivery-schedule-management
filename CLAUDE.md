@@ -239,9 +239,10 @@ unilaterally in this repo:
    `DeliveryDay` only reaches `Delivered`/`Failed` via this call) — but the master table never shows
    MS5 calling MS4 anywhere. **Update (2026-10-28):** MS5 now publishes `DeliveryAddedToRoute`,
    `DeliveryCompleted` and `DeliveryFailed`, and MS4 consumes them (`src/Infrastructure/Messaging/`,
-   table `DeliveryRouteLinks`). It only works end to end once `PackageId` is MS4's `packId` (MS3's
-   `PackageValidated` still sends its own GUID — ms3-gap-03) and the `ms4.delivery-*` queues exist in
-   `nur-tricenter-local`. Until then days stay in `ReadyForProduction`/`InProduction`.
+   table `DeliveryRouteLinks`). Packages from MS3's `PackageValidated` carry MS3's own GUID, not
+   MS4's `packId` (ms3-gap-03), so `DeliveryAddedToRouteConsumer` falls back to matching by patient
+   (earliest `ReadyForProduction`/`InProduction` day not linked yet). Verified end to end on the
+   local stack on 2026-10-28. The proper fix is a `packId` field in the kernel's `PackageValidated`.
 
 2. ~~**MS4 ↔ MS2 outbound catalog contract has three conflicting shapes.**~~ **Resolved** against
    MS2's actual code (ms2-plans-and-recipes-catalog): none of the three documented shapes exists

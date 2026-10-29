@@ -632,7 +632,7 @@ The daily catalog job (`POST /calendars/resolve-daily-catalog`) must run **befor
 |---|---|---|
 | `ms4.meal-plan-published` | `MealPlanPublished` | Projects the plan into `PlanCatalog`; `POST /schedule` rejects a duration that contradicts it (400) |
 | `ms4.recipe-updated` | `RecipeUpdated` | Refreshes the recipe-name snapshot on open delivery days |
-| `ms4.delivery-added-to-route` | `DeliveryAddedToRoute` (MS5) | Links the MS5 `DeliveryId` to the delivery day named by `PackageId` (= MS4 `packId`) in `DeliveryRouteLinks`; a non-numeric `PackageId` is ignored |
+| `ms4.delivery-added-to-route` | `DeliveryAddedToRoute` (MS5) | Links the MS5 `DeliveryId` to a delivery day in `DeliveryRouteLinks`: the day named by `PackageId` when it is MS4's `packId`, otherwise the patient's earliest `ReadyForProduction`/`InProduction` day not linked yet (packages from MS3's `package-validated` carry MS3's GUID). No match → ignored |
 | `ms4.delivery-completed` | `DeliveryCompleted` (MS5) | Looks up the linked day and marks it `Delivered` (evidence = the event's `DeliveredAt`); same rule as `PATCH /delivery-result` |
 | `ms4.delivery-failed` | `DeliveryFailed` (MS5) | Marks the linked day `Failed` |
 
@@ -642,7 +642,7 @@ The delivery consumers never fail on business grounds: an unlinked delivery, a m
 
 ### Known integration gaps (pending resolution upstream)
 
-1. **Delivery outcomes arrive as events, but only if `PackageId` is MS4's `packId`.** MS4 now consumes MS5's `DeliveryAddedToRoute` / `DeliveryCompleted` / `DeliveryFailed`. `DeliveryCompleted` and `DeliveryFailed` carry only `DeliveryId`, so MS4 can close a day only if `DeliveryAddedToRoute.PackageId` equals the day id. Today MS3's `PackageValidated.PackageId` is MS3's own GUID (ms3-gap-03), so until MS3 sends the `packId` and MS5 stores it, days stay in `ReadyForProduction`. The `ms4.delivery-*` queues must also exist in `nur-tricenter-local`'s `rabbitmq-definitions.json`.
+1. **Delivery outcomes arrive as events; the day is matched by patient when `PackageId` isn't MS4's `packId`.** MS4 consumes MS5's `DeliveryAddedToRoute` / `DeliveryCompleted` / `DeliveryFailed`. The last two carry only `DeliveryId`, so the day is resolved through `DeliveryRouteLinks`. MS3's `PackageValidated.PackageId` is MS3's own GUID (the contract has no field for MS4's `packId`, ms3-gap-03), so for those packages MS4 links the patient's earliest day in production that has no delivery yet. This is unambiguous while a patient has one day per delivery date and packages are dispatched in date order; the proper fix is a `packId` field in the kernel contract. Verified end to end on the local stack (2026-10-28).
 
 2. ~~**MS4 ↔ MS2 contract needs reconciliation.**~~ **Resolved:** MS4 uses the endpoint MS2 really exposes, `GET /api/catalog/v1/meal-plans/{id}`, and picks the plan day by `DayNumber`. The master table should be updated to say so.
 
