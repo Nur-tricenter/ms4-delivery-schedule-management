@@ -632,7 +632,7 @@ The daily catalog job (`POST /calendars/resolve-daily-catalog`) must run **befor
 |---|---|---|
 | `ms4.meal-plan-published` | `MealPlanPublished` | Projects the plan into `PlanCatalog`; `POST /schedule` rejects a duration that contradicts it (400) |
 | `ms4.recipe-updated` | `RecipeUpdated` | Refreshes the recipe-name snapshot on open delivery days |
-| `ms4.delivery-added-to-route` | `DeliveryAddedToRoute` (MS5) | Links the MS5 `DeliveryId` to a delivery day in `DeliveryRouteLinks`: the day named by `PackageId` when it is MS4's `packId`, otherwise the patient's earliest `ReadyForProduction`/`InProduction` day not linked yet (packages from MS3's `package-validated` carry MS3's GUID). No match → ignored |
+| `ms4.delivery-added-to-route` | `DeliveryAddedToRoute` (MS5) | Links the MS5 `DeliveryId` to a delivery day in `DeliveryRouteLinks`: the day named by `DeliveryDayId` (MS4's `packId`, carried end to end since kernel 1.4.0), then by `PackageId` when it is MS4's `packId`, otherwise the patient's earliest `ReadyForProduction`/`InProduction` day not linked yet (packages from MS3's `package-validated` carry MS3's GUID). No match → ignored |
 | `ms4.delivery-completed` | `DeliveryCompleted` (MS5) | Looks up the linked day and marks it `Delivered` (evidence = the event's `DeliveredAt`); same rule as `PATCH /delivery-result` |
 | `ms4.delivery-failed` | `DeliveryFailed` (MS5) | Marks the linked day `Failed` |
 
@@ -642,7 +642,7 @@ The delivery consumers never fail on business grounds: an unlinked delivery, a m
 
 ### Known integration gaps (pending resolution upstream)
 
-1. **Delivery outcomes arrive as events; the day is matched by patient when `PackageId` isn't MS4's `packId`.** MS4 consumes MS5's `DeliveryAddedToRoute` / `DeliveryCompleted` / `DeliveryFailed`. The last two carry only `DeliveryId`, so the day is resolved through `DeliveryRouteLinks`. MS3's `PackageValidated.PackageId` is MS3's own GUID (the contract has no field for MS4's `packId`, ms3-gap-03), so for those packages MS4 links the patient's earliest day in production that has no delivery yet. This is unambiguous while a patient has one day per delivery date and packages are dispatched in date order; the proper fix is a `packId` field in the kernel contract. Verified end to end on the local stack (2026-10-28).
+1. **Delivery outcomes arrive as events; the day is found by `DeliveryDayId`, then `PackageId`, then patient.** MS4 consumes MS5's `DeliveryAddedToRoute` / `DeliveryCompleted` / `DeliveryFailed`. The last two carry only `DeliveryId`, so the day is resolved through `DeliveryRouteLinks`. MS3's `PackageValidated.PackageId` is MS3's own GUID, so MS4's `packId` travels in `DeliveryDayId` (kernel 1.4.0: MS3 → MS5 → MS4). Messages without it fall back to a numeric `PackageId`, and then to the patient's earliest day in production that has no delivery yet; that last step is unambiguous while a patient has one day per delivery date and packages are dispatched in date order. Verified end to end on the local stack (2026-10-28).
 
 2. ~~**MS4 ↔ MS2 contract needs reconciliation.**~~ **Resolved:** MS4 uses the endpoint MS2 really exposes, `GET /api/catalog/v1/meal-plans/{id}`, and picks the plan day by `DayNumber`. The master table should be updated to say so.
 
@@ -909,7 +909,7 @@ En sentido saliente, MS4 depende de **MS2** (el catálogo de planes). Para resol
 
 Además, MS4 **escucha eventos** de MS2 por **RabbitMQ**, en un proceso aparte (`WorkerService`): cuando se publica un plan guarda una copia local de sus datos básicos (para rechazar un calendario cuya duración no coincide con el plan), y cuando se actualiza una receta refresca su nombre en los días de entrega abiertos. Cada mensaje pasa por una bandeja de entrada idempotente, así que un mensaje repetido no tiene efecto.
 
-MS4 también escucha los eventos de entrega de MS5 (entrega añadida a una ruta, completada y fallida) para cerrar cada día como Delivered o Failed. Queda pendiente que el identificador del paquete que MS5 recibe de MS3 sea el packId de MS4; mientras no lo sea, los días quedan en estado ReadyForProduction.
+MS4 también escucha los eventos de entrega de MS5 (entrega añadida a una ruta, completada y fallida) para cerrar cada día como Delivered o Failed. El día se identifica con el `DeliveryDayId` (el packId de MS4) que viaja de MS3 a MS5 y de vuelta a MS4; si el mensaje no lo trae, se usa el identificador del paquete cuando es numérico y, en último caso, el día más próximo del paciente que esté en producción.
 
 ---
 

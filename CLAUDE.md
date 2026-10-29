@@ -240,9 +240,10 @@ unilaterally in this repo:
    MS5 calling MS4 anywhere. **Update (2026-10-28):** MS5 now publishes `DeliveryAddedToRoute`,
    `DeliveryCompleted` and `DeliveryFailed`, and MS4 consumes them (`src/Infrastructure/Messaging/`,
    table `DeliveryRouteLinks`). Packages from MS3's `PackageValidated` carry MS3's own GUID, not
-   MS4's `packId` (ms3-gap-03), so `DeliveryAddedToRouteConsumer` falls back to matching by patient
-   (earliest `ReadyForProduction`/`InProduction` day not linked yet). Verified end to end on the
-   local stack on 2026-10-28. The proper fix is a `packId` field in the kernel's `PackageValidated`.
+   MS4's `packId` (ms3-gap-03), so MS4's day id now travels in `DeliveryDayId` (kernel 1.4.0,
+   MS3 → MS5 → MS4). `DeliveryAddedToRouteConsumer` looks the day up by `DeliveryDayId`, then a numeric
+   `PackageId`, then falls back to matching by patient (earliest `ReadyForProduction`/`InProduction`
+   day not linked yet). Verified end to end on the local stack on 2026-10-28 (patient fallback).
 
 2. ~~**MS4 ↔ MS2 outbound catalog contract has three conflicting shapes.**~~ **Resolved** against
    MS2's actual code (ms2-plans-and-recipes-catalog): none of the three documented shapes exists

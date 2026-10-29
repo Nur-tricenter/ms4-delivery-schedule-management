@@ -64,15 +64,16 @@ public sealed class RecipeUpdatedConsumer(
 /// <c>ms4.delivery-added-to-route</c> -> remembers which MS4 delivery day an MS5 delivery carries.
 /// </summary>
 /// <remarks>
-/// Two ways to find the day:
+/// Three ways to find the day, in this order:
 /// <list type="number">
+/// <item><c>DeliveryDayId</c>: MS4's <c>packId</c>, carried from MS3's <c>PackageValidated</c> through MS5
+/// since kernel 1.4.0.</item>
 /// <item><c>PackageId</c> is MS4's <c>packId</c> (the <c>DeliveryDay.Id</c>): the package was loaded
-/// into MS5 with the id from <c>active-tomorrow</c>.</item>
-/// <item>Otherwise, by patient. Packages that reach MS5 through MS3's <c>package-validated</c> carry
-/// MS3's own package GUID, because that contract has no field for MS4's <c>packId</c>. The day is
-/// then the patient's earliest day in production (<c>ReadyForProduction</c>/<c>InProduction</c>) that
-/// no other delivery is linked to. A patient has at most one such day per delivery date, so this is
-/// unambiguous as long as packages are dispatched in date order.</item>
+/// into MS5 by hand with the id from <c>active-tomorrow</c>.</item>
+/// <item>Otherwise, by patient (fallback for messages without a day id). The day is the patient's
+/// earliest day in production (<c>ReadyForProduction</c>/<c>InProduction</c>) that no other delivery
+/// is linked to. A patient has at most one such day per delivery date, so this is unambiguous as
+/// long as packages are dispatched in date order.</item>
 /// </list>
 /// A message matching neither (e.g. a package loaded by hand for an unknown patient) is ignored.
 /// </remarks>
@@ -85,9 +86,10 @@ public sealed class DeliveryAddedToRouteConsumer(
 
     public async Task HandleAsync(DeliveryAddedToRoute message, CancellationToken cancellationToken = default)
     {
-        int? dayId = int.TryParse(message.PackageId, out var packId)
-            ? packId
-            : await FindDayByPatientAsync(message, cancellationToken);
+        int? dayId = message.DeliveryDayId
+            ?? (int.TryParse(message.PackageId, out var packId)
+                ? packId
+                : await FindDayByPatientAsync(message, cancellationToken));
 
         if (dayId is null)
         {
