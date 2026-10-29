@@ -909,7 +909,7 @@ En sentido saliente, MS4 depende de **MS2** (el catálogo de planes). Para resol
 
 Además, MS4 **escucha eventos** de MS2 por **RabbitMQ**, en un proceso aparte (`WorkerService`): cuando se publica un plan guarda una copia local de sus datos básicos (para rechazar un calendario cuya duración no coincide con el plan), y cuando se actualiza una receta refresca su nombre en los días de entrega abiertos. Cada mensaje pasa por una bandeja de entrada idempotente, así que un mensaje repetido no tiene efecto.
 
-MS4 también escucha los eventos de entrega de MS5 (entrega añadida a una ruta, completada y fallida) para cerrar cada día como Delivered o Failed. Queda pendiente que el identificador del paquete que MS5 recibe de MS3 sea el packId de MS4; mientras no lo sea, los días quedan en estado ReadyForProduction.
+MS4 también escucha los eventos de entrega de MS5 (entrega añadida a una ruta, completada y fallida) para cerrar cada día como Delivered o Failed. El día se identifica con el `DeliveryDayId` (el packId de MS4) que viaja de MS3 a MS5 y de vuelta a MS4; si el mensaje no lo trae, se usa el identificador del paquete cuando es numérico y, en último caso, el día más próximo del paciente que esté en producción.
 
 ---
 
