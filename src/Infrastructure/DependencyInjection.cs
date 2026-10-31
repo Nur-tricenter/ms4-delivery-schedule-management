@@ -41,6 +41,7 @@ public static class DependencyInjection
         builder.Services.AddScoped<IProductionOrderRepository, ProductionOrderRepository>();
         builder.Services.AddScoped<IClock, SystemClock>();
         builder.Services.AddScoped<IPlanCatalog, PlanCatalog>();
+        builder.Services.AddScoped<IDeliveryRouteLinks, DeliveryRouteLinks>();
         builder.AddCatalogPort();
     }
 

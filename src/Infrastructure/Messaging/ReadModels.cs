@@ -143,3 +143,15 @@ public class PlanCatalog(ApplicationDbContext context) : IPlanCatalog
             .Select(p => new PlanSummary(p.PlanId, p.Name, p.TotalDays))
             .FirstOrDefaultAsync(cancellationToken);
 }
+
+/// <summary><see cref="IDeliveryRouteLinks"/> over the <see cref="DeliveryRouteLink"/> projection.</summary>
+public class DeliveryRouteLinks(ApplicationDbContext context) : IDeliveryRouteLinks
+{
+    public async Task<DeliveryRouteLinkSummary?> FindLatestForDayAsync(int dayId, CancellationToken cancellationToken) =>
+        await context.DeliveryRouteLinks
+            .AsNoTracking()
+            .Where(l => l.DayId == dayId)
+            .OrderByDescending(l => l.LinkedAt)
+            .Select(l => new DeliveryRouteLinkSummary(l.DeliveryId, l.RouteId, l.DayId, l.LinkedAt))
+            .FirstOrDefaultAsync(cancellationToken);
+}

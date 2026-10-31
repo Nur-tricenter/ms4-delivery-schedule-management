@@ -10,6 +10,7 @@ using delivery_schedule_management.Application.Calendars.Commands.RescheduleDeli
 using delivery_schedule_management.Application.Calendars.Commands.ResolveDailyCatalog;
 using delivery_schedule_management.Application.Calendars.Commands.SetDeliveryAddress;
 using delivery_schedule_management.Application.Calendars.Common;
+using delivery_schedule_management.Application.Calendars.Queries.GetDayDeliveryLink;
 using delivery_schedule_management.Domain.Enums;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -358,5 +359,99 @@ public class CalendarsEndpointsTests : TestBase
         var response = await client.GetAsync("/health");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    // ---- Lookups (cross-service gap X-17) ----
+
+    private static async Task<CreateScheduleResult> CreateCalendarAsync(HttpClient client, Guid patientId, Guid contractId)
+    {
+        var response = await client.PostAsJsonAsync("/api/v1/schedule", new CreateScheduleRequest(
+            contractId, patientId, Guid.NewGuid(), 15, DateOnly.FromDateTime(DateTime.UtcNow).AddDays(10)));
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<CreateScheduleResult>(JsonOptions))!;
+    }
+
+    [Test]
+    public async Task GetCalendarByContract_ShouldReturn200_WithTheContractsCalendar()
+    {
+        using var client = CreateClient();
+        var contractId = Guid.NewGuid();
+        var created = await CreateCalendarAsync(client, Guid.NewGuid(), contractId);
+
+        var response = await client.GetAsync($"/api/v1/calendars/by-contract/{contractId}");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<CalendarVm>(JsonOptions);
+        body.ShouldNotBeNull();
+        body.Id.ShouldBe(created.CalendarId);
+        body.ContractId.ShouldBe(contractId);
+    }
+
+    [Test]
+    public async Task GetCalendarByContract_ShouldReturn404_WhenUnknownContract()
+    {
+        using var client = CreateClient();
+
+        var response = await client.GetAsync($"/api/v1/calendars/by-contract/{Guid.NewGuid()}");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
+
+    [Test]
+    public async Task GetCalendarsByPatient_ShouldReturn200_WithEveryCalendarOfThePatient()
+    {
+        using var client = CreateClient();
+        var patientId = Guid.NewGuid();
+        await CreateCalendarAsync(client, patientId, Guid.NewGuid());
+        await CreateCalendarAsync(client, patientId, Guid.NewGuid());
+        await CreateCalendarAsync(client, Guid.NewGuid(), Guid.NewGuid());
+
+        var response = await client.GetAsync($"/api/v1/calendars/by-patient/{patientId}");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<List<CalendarVm>>(JsonOptions);
+        body.ShouldNotBeNull();
+        body.Count.ShouldBe(2);
+        body.ShouldAllBe(c => c.PatientId == patientId);
+    }
+
+    [Test]
+    public async Task GetDayDeliveryLink_ShouldReturn200_WithNullDelivery_WhenNotRoutedYet()
+    {
+        using var client = CreateClient();
+        var created = await CreateCalendarAsync(client, Guid.NewGuid(), Guid.NewGuid());
+        var dayId = created.Days[0].Id;
+
+        var response = await client.GetAsync($"/api/v1/calendars/days/{dayId}/delivery-link");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<DayDeliveryLinkVm>(JsonOptions);
+        body.ShouldNotBeNull();
+        body.DayId.ShouldBe(dayId);
+        body.CalendarId.ShouldBe(created.CalendarId);
+        body.DayStatus.ShouldBe(DayStatus.Pending);
+        body.DeliveryId.ShouldBeNull();
+    }
+
+    [Test]
+    public async Task GetDayDeliveryLink_ShouldReturn404_WhenDayMissing()
+    {
+        using var client = CreateClient();
+
+        var response = await client.GetAsync("/api/v1/calendars/days/999999/delivery-link");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
+
+    [TestCase("/api/v1/calendars/by-contract/00000000-0000-0000-0000-000000000001")]
+    [TestCase("/api/v1/calendars/by-patient/00000000-0000-0000-0000-000000000001")]
+    [TestCase("/api/v1/calendars/days/1/delivery-link")]
+    public async Task Lookups_ShouldRequireCalendarRead(string url)
+    {
+        using var anonymous = FunctionalTestSetup.CreateAnonymousHttpClient();
+        (await anonymous.GetAsync(url)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+
+        using var wrongScope = FunctionalTestSetup.CreateHttpClient(DeliveryCalendarPermission.ProductionOrderRead);
+        (await wrongScope.GetAsync(url)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }
 }

@@ -20,6 +20,9 @@ public class FakeCalendarRepository : ICalendarRepository
     public Task<DeliveryCalendar?> GetByDeliveryDayIdAsync(int dayId, CancellationToken cancellationToken) =>
         Task.FromResult(_calendars.FirstOrDefault(c => c.Days.Any(d => d.Id == dayId)));
 
+    public Task<List<DeliveryCalendar>> GetByPatientIdAsync(Guid patientId, CancellationToken cancellationToken) =>
+        Task.FromResult(_calendars.Where(c => c.PatientId == patientId).OrderByDescending(c => c.Id).ToList());
+
     public Task<List<DeliveryCalendar>> GetActiveForDeliveryDateAsync(DateOnly date, CancellationToken cancellationToken) =>
         Task.FromResult(_calendars.Where(c => c.Days.Any(d => d.Date.Value == date)).ToList());
 

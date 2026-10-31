@@ -99,3 +99,15 @@ Content-Type: application/json
   "photoUrl": "https://example.com/evidence.jpg",
   "signatureUrl": null
 }
+
+### 9. Lookup — calendar of a contract (404 until MS3 creates it)
+GET {{Api_HostAddress}}/api/v1/calendars/by-contract/{{contractId}}
+Authorization: Bearer {{token}}
+
+### 10. Lookup — calendars of a patient (newest first)
+GET {{Api_HostAddress}}/api/v1/calendars/by-patient/{{patientId}}
+Authorization: Bearer {{token}}
+
+### 11. Lookup — MS5 delivery/route linked to a day (null fields until MS5 routes it)
+GET {{Api_HostAddress}}/api/v1/calendars/days/{{dayId}}/delivery-link
+Authorization: Bearer {{token}}

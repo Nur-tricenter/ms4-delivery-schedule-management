@@ -5,6 +5,7 @@ using delivery_schedule_management.Application.Calendars.Commands.RescheduleDeli
 using delivery_schedule_management.Application.Calendars.Commands.SetDeliveryAddress;
 using delivery_schedule_management.Application.Calendars.Common;
 using delivery_schedule_management.Application.Calendars.Queries.GetActiveTomorrow;
+using delivery_schedule_management.Application.Calendars.Queries.GetDayDeliveryLink;
 using Nur.Tricenter.Access.DeliveryCalendar;
 
 namespace delivery_schedule_management.Api.Endpoints;
@@ -53,6 +54,37 @@ public partial class Calendars : IEndpointGroup
                 "Returns the full calendar with all delivery days and their current statuses. " +
                 "Use the calendarId from Step 1. Copy a dayId from the days list for Steps 3–8.")
             .Produces<CalendarVm>()
+            .ProducesProblem(404)
+            .RequireAuthorization(DeliveryCalendarPermission.CalendarRead);
+
+        // Lookups for following a case end to end (cross-service gap X-17). Read-only, same scope as
+        // GET calendars/{id}. The literal segments keep them apart from the calendars/{id} route.
+        groupBuilder.MapGet(GetCalendarByContract, "calendars/by-contract/{contractId:guid}")
+            .WithSummary("[Lookup] Find the calendar of an MS3 contract")
+            .WithDescription(
+                "Caller: Frontend / demo console. " +
+                "Returns the calendar created for this contractId (at most one: POST /schedule is idempotent by contract). " +
+                "404 if MS3 has not created it yet.")
+            .Produces<CalendarVm>()
+            .ProducesProblem(404)
+            .RequireAuthorization(DeliveryCalendarPermission.CalendarRead);
+
+        groupBuilder.MapGet(GetCalendarsByPatient, "calendars/by-patient/{patientId:guid}")
+            .WithSummary("[Lookup] List the calendars of a patient")
+            .WithDescription(
+                "Caller: Frontend / demo console. " +
+                "Returns every calendar of the patient, newest first, with their days. " +
+                "An unknown patient returns an empty list.")
+            .Produces<List<CalendarVm>>()
+            .RequireAuthorization(DeliveryCalendarPermission.CalendarRead);
+
+        groupBuilder.MapGet(GetDayDeliveryLink, "calendars/days/{dayId:int}/delivery-link")
+            .WithSummary("[Lookup] Follow a delivery day to its MS5 delivery and route")
+            .WithDescription(
+                "Caller: Frontend / demo console. " +
+                "Returns the day's status plus the MS5 deliveryId/routeId linked by the delivery-added-to-route event. " +
+                "The delivery fields are null until MS5 routes the day's package. 404 if the day does not exist.")
+            .Produces<DayDeliveryLinkVm>()
             .ProducesProblem(404)
             .RequireAuthorization(DeliveryCalendarPermission.CalendarRead);
 
