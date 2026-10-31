@@ -1,0 +1,82 @@
+Summary
+  Generated on: 10/10/2026 - 11:30:05
+  Coverage date: 10/10/2026 - 11:29:51 - 10/10/2026 - 11:30:03
+  Parser: MultiReport (2x Cobertura)
+  Assemblies: 3
+  Classes: 56
+  Files: 54
+  Line coverage: 98.1%
+  Covered lines: 731
+  Uncovered lines: 14
+  Coverable lines: 745
+  Total lines: 1686
+  Branch coverage: 89.3% (126 of 141)
+  Covered branches: 126
+  Total branches: 141
+  Method coverage: 98.1% (107 of 109)
+  Full method coverage: 95.4% (104 of 109)
+  Covered methods: 107
+  Fully covered methods: 104
+  Total methods: 109
+
+delivery_schedule_management.Application                                                                                    99.5%
+  delivery_schedule_management.Application.Calendars.Commands.ApplyDeliveryResult.ApplyDeliveryResultCommandHandler          100%
+  delivery_schedule_management.Application.Calendars.Commands.ApplyDeliveryResult.ApplyDeliveryResultCommandValidator        100%
+  delivery_schedule_management.Application.Calendars.Commands.CancelDeliveryDay.CancelDeliveryDayCommandHandler              100%
+  delivery_schedule_management.Application.Calendars.Commands.CancelDeliveryDay.CancelDeliveryDayCommandValidator            100%
+  delivery_schedule_management.Application.Calendars.Commands.CreateSchedule.CreateScheduleCommandHandler                    100%
+  delivery_schedule_management.Application.Calendars.Commands.CreateSchedule.CreateScheduleCommandValidator                  100%
+  delivery_schedule_management.Application.Calendars.Commands.RescheduleDeliveryDay.RescheduleDeliveryDayCommandHandler     90.9%
+  delivery_schedule_management.Application.Calendars.Commands.RescheduleDeliveryDay.RescheduleDeliveryDayCommandValidator    100%
+  delivery_schedule_management.Application.Calendars.Commands.ResolveDailyCatalog.ResolveDailyCatalogCommandHandler          100%
+  delivery_schedule_management.Application.Calendars.Commands.SetDeliveryAddress.SetDeliveryAddressCommandHandler            100%
+  delivery_schedule_management.Application.Calendars.Commands.SetDeliveryAddress.SetDeliveryAddressCommandValidator          100%
+  delivery_schedule_management.Application.Calendars.Common.CalendarMappings                                                 100%
+  delivery_schedule_management.Application.Calendars.Queries.GetActiveTomorrow.GetActiveTomorrowQueryHandler                 100%
+  delivery_schedule_management.Application.Calendars.Queries.GetCalendar.GetCalendarQueryHandler                             100%
+  delivery_schedule_management.Application.Common.Behaviours.LoggingBehaviour<T>                                             100%
+  delivery_schedule_management.Application.Common.Behaviours.PerformanceBehaviour<T1, T2>                                    100%
+  delivery_schedule_management.Application.Common.Behaviours.UnhandledExceptionBehaviour<T1, T2>                             100%
+  delivery_schedule_management.Application.Common.Behaviours.ValidationBehaviour<T1, T2>                                     100%
+  delivery_schedule_management.Application.Common.Exceptions.ForbiddenAccessException                                        100%
+  delivery_schedule_management.Application.Common.Exceptions.ValidationException                                             100%
+  delivery_schedule_management.Application.Common.Models.Result                                                              100%
+  Microsoft.Extensions.DependencyInjection.DependencyInjection                                                               100%
+
+delivery_schedule_management.Domain                                                                                         99.4%
+  delivery_schedule_management.Domain.Common.BaseEntity                                                                      100%
+  delivery_schedule_management.Domain.Common.ValueObject                                                                     100%
+  delivery_schedule_management.Domain.Entities.DeliveryCalendar                                                              100%
+  delivery_schedule_management.Domain.Entities.DeliveryDay                                                                  97.7%
+  delivery_schedule_management.Domain.Entities.ProductionOrder                                                               100%
+  delivery_schedule_management.Domain.Entities.ProductionOrderLine                                                           100%
+  delivery_schedule_management.Domain.Exceptions.DeliveryWindowLockedException                                               100%
+  delivery_schedule_management.Domain.Exceptions.InvalidDeliveryDayTransitionException                                       100%
+  delivery_schedule_management.Domain.Services.OrderConsolidationService                                                     100%
+  delivery_schedule_management.Domain.ValueObjects.ContractReference                                                         100%
+  delivery_schedule_management.Domain.ValueObjects.Coordinates                                                               100%
+  delivery_schedule_management.Domain.ValueObjects.DeliveryAddress                                                           100%
+  delivery_schedule_management.Domain.ValueObjects.DeliveryDate                                                              100%
+  delivery_schedule_management.Domain.ValueObjects.DeliveryEvidence                                                          100%
+  delivery_schedule_management.Domain.ValueObjects.PlanDuration                                                              100%
+  delivery_schedule_management.Domain.ValueObjects.PlanReference                                                             100%
+  delivery_schedule_management.Domain.ValueObjects.PortionQuantity                                                           100%
+  delivery_schedule_management.Domain.ValueObjects.RecipeReference                                                           100%
+
+delivery_schedule_management.Infrastructure                                                                                   96%
+  delivery_schedule_management.Infrastructure.Catalog.HttpCatalogPort                                                        100%
+  delivery_schedule_management.Infrastructure.Catalog.MockCatalogPort                                                        100%
+  delivery_schedule_management.Infrastructure.Common.SystemClock                                                             100%
+  delivery_schedule_management.Infrastructure.Data.ApplicationDbContext                                                      100%
+  delivery_schedule_management.Infrastructure.Data.ApplicationDbContextInitialiser                                          97.2%
+  delivery_schedule_management.Infrastructure.Data.Configurations.DeliveryCalendarConfiguration                              100%
+  delivery_schedule_management.Infrastructure.Data.Configurations.DeliveryDayConfiguration                                   100%
+  delivery_schedule_management.Infrastructure.Data.Configurations.ProductionOrderConfiguration                               100%
+  delivery_schedule_management.Infrastructure.Data.Configurations.ProductionOrderLineConfiguration                           100%
+  delivery_schedule_management.Infrastructure.Data.InitialiserExtensions                                                       0%
+  delivery_schedule_management.Infrastructure.Data.Interceptors.AuditableEntityInterceptor                                   100%
+  delivery_schedule_management.Infrastructure.Data.Interceptors.DispatchDomainEventsInterceptor                              100%
+  delivery_schedule_management.Infrastructure.Data.Interceptors.Extensions                                                     0%
+  delivery_schedule_management.Infrastructure.Data.Repositories.CalendarRepository                                           100%
+  delivery_schedule_management.Infrastructure.Data.Repositories.ProductionOrderRepository                                    100%
+  Microsoft.Extensions.DependencyInjection.DependencyInjection                                                               100%
