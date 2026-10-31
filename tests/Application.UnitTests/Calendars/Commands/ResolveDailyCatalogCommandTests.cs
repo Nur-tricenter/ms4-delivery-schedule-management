@@ -33,8 +33,9 @@ public class ResolveDailyCatalogCommandTests
     }
 
     private static ResolveDailyCatalogCommandHandler CreateHandler(
-        FakeCalendarRepository calendars, FakeProductionOrderRepository orders, ICatalogPort catalog, DateOnly deliveryDate) =>
-        new(calendars, orders, catalog, new FakeApplicationDbContext(),
+        FakeCalendarRepository calendars, FakeProductionOrderRepository orders, ICatalogPort catalog, DateOnly deliveryDate,
+        IProductionOrderEvents? events = null) =>
+        new(calendars, orders, catalog, events ?? new FakeProductionOrderEvents(), new FakeApplicationDbContext(),
             new TestClock(new DateTimeOffset(deliveryDate.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero).AddDays(-1)),
             NullLogger<ResolveDailyCatalogCommandHandler>.Instance);
 
@@ -61,6 +62,36 @@ public class ResolveDailyCatalogCommandTests
 
         orderRepository.Orders.Count.ShouldBe(1);
         orderRepository.Orders[0].Lines.Count.ShouldBe(1);
+    }
+
+    [Test]
+    public async Task Handle_ShouldStageProductionOrderReadyEvent_WithTheConsolidatedOrder()
+    {
+        var deliveryDate = new DateOnly(2026, 8, 10);
+        var (calendarRepository, orderRepository, dayId) = await SeedScheduledDay(deliveryDate);
+        var events = new FakeProductionOrderEvents();
+
+        await CreateHandler(calendarRepository, orderRepository, new FakeCatalogPort(), deliveryDate, events)
+            .Handle(new ResolveDailyCatalogCommand(deliveryDate), CancellationToken.None);
+
+        var (order, calendars) = events.Staged.ShouldHaveSingleItem();
+        order.ShouldBeSameAs(orderRepository.Orders.Single());
+        order.Lines.Single().DeliveryDayId.ShouldBe(dayId);
+        calendars.ShouldContain(calendarRepository.Calendars.Single());
+    }
+
+    [Test]
+    public async Task Handle_ShouldStageTheEventOnEveryRun_SoARerunRecoversALostPublish()
+    {
+        var deliveryDate = new DateOnly(2026, 8, 10);
+        var (calendarRepository, orderRepository, _) = await SeedScheduledDay(deliveryDate);
+        var events = new FakeProductionOrderEvents();
+        var handler = CreateHandler(calendarRepository, orderRepository, new FakeCatalogPort(), deliveryDate, events);
+
+        await handler.Handle(new ResolveDailyCatalogCommand(deliveryDate), CancellationToken.None);
+        await handler.Handle(new ResolveDailyCatalogCommand(deliveryDate), CancellationToken.None);
+
+        events.Staged.Count.ShouldBe(2);
     }
 
     [Test]

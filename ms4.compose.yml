@@ -88,13 +88,9 @@ services:
       HttpsRedirection__Enabled: "false"
       OpenApi__Enabled: "false"
 
-      # Real MS2, through the gateway (the platform's single entry point), as MS4's service
-      # account. nur-tricenter-local's start-stack script creates that account in identity.
+      # Menus come from MS4's own projection of MS2's meal plan compositions (the worker fills
+      # it from RabbitMQ); there is no HTTP call to MS2 or identity.
       Catalog__UseMock: "false"
-      Catalog__BaseUrl: "http://gateway:8080"
-      Identity__BaseUrl: "http://gateway:8080"
-      Identity__ServiceUserName: "ms4-service"
-      Identity__ServicePassword: "dev-only-ms4-service-password"
     networks: [nur-tricenter-net]
     depends_on:
       db:
@@ -112,8 +108,9 @@ services:
       start_period: 20s
     restart: unless-stopped
 
-  # RabbitMQ consumers (ms4.meal-plan-published, ms4.recipe-updated). Serves no HTTP, so it is not
-  # registered in Consul.
+  # RabbitMQ consumers (ms4.contract-activated, ms4.meal-plan-composition-changed,
+  # ms4.meal-plan-published, ms4.recipe-updated, ms4.delivery-*) and the outbox dispatcher that
+  # publishes production-order-ready. Serves no HTTP, so it is not registered in Consul.
   delivery-calendar-workerservice:
     image: mcr.microsoft.com/dotnet/aspnet:10.0
     container_name: nur-tricenter-delivery-calendar-workerservice
@@ -125,6 +122,7 @@ services:
     environment:
       <<: *ms4-database
       DOTNET_ENVIRONMENT: Development
+      Catalog__UseMock: "false"
       RabbitMqSettings__Host: "nur-tricenter-rabbitmq"
       RabbitMqSettings__UserName: "guest"
       RabbitMqSettings__Password: "guest"

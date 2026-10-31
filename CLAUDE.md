@@ -27,11 +27,11 @@ All docs and code in this repository must be written in English.
 
 Endpoints 8–10 are read-only lookups added for cross-service gap X-17 (following a contract to its calendar and a day to its MS5 delivery without reading the databases). They reuse scope `deliveryCalendar.calendar:read`.
 
-Note: endpoint #2 serves a dual purpose per the original requirements table — an auxiliary MS3 query **and** the mechanism by which MS3 generates the daily production order (replaces the async `ProductionOrderRequired` event documented in the architecture phase). MS4 must have tomorrow's day already resolved (recipe/portions via MS2) **before** this call arrives — never resolve on-demand inside the request.
+Note: endpoints #1 and #2 are no longer called by MS3. MS3 now publishes `ContractActivated` (MS4 consumes it and sends the same `CreateScheduleCommand`), and MS4 publishes `ProductionOrderReady` after resolve-daily-catalog (MS3 projects it). The endpoints stay for the frontend, ops and tests. Tomorrow's days must still be resolved (recipe/portions) **before** the order is read — never resolve on-demand inside the request.
 
 ### MS4 outbound dependency
 
-- `ICatalogPort.GetDayMenuAsync(planId, dayNumber)` → MS2's real endpoint `GET /api/catalog/v1/meal-plans/{id}` (through the platform gateway, as service account `ms4-service` with `catalog.mealPlan:read`), filtered to `PlanDay.DayNumber == dayNumber`. MS2 has no per-date endpoint: plans are modelled by day **number**, so `DeliveryDay.DayNumber` (1..N, fixed at creation) is what MS4 sends. The original `GET /catalog/plans/{id}/day/{date}` never existed in MS2 and is superseded. `Catalog:UseMock=true` (Aspire, tests) keeps the fixture adapter.
+MS4 makes **no outbound HTTP**. `ICatalogPort.GetDayMenuAsync(planId, dayNumber)` reads MS4's own `PlanDayMenus` projection (`ProjectedCatalogPort`), filled from MS2's `MealPlanCompositionChanged` events (queue `ms4.meal-plan-composition-changed`). MS2 plans are modelled by day **number**, so `DeliveryDay.DayNumber` (1..N, fixed at creation) is the key. `Catalog:UseMock=true` (Aspire, tests) keeps the fixture adapter.
 - All endpoints in the table above are served on the Nur-Tricenter platform at `/api/delivery-calendar/v1/...` (gateway prefix `/api/delivery-calendar`, from the Consul service name) and require a bearer JWT from nur-tricenter-identity — see §5 "Nur-Tricenter platform integration".
 
 ---
@@ -147,9 +147,9 @@ Verify against the already-defined criteria:
 ---
 
 ## 4. Out of scope at this stage (already agreed during the architecture phase)
-- ~~A real message broker.~~ Superseded by the platform integration: MS4 now **consumes** RabbitMQ events (see §5). It still publishes none.
-- ~~Service-to-service authentication.~~ Superseded: MS4 → MS2 calls authenticate as service account `ms4-service`.
-- Outbox pattern (MS4 publishes no events, so it has nothing to put in one).
+- ~~A real message broker.~~ Superseded by the platform integration: MS4 **consumes** RabbitMQ events and **publishes** `ProductionOrderReady` (see §5).
+- ~~Service-to-service authentication.~~ Superseded and then removed: MS4 makes no outbound calls any more. The `ms4-service` account still exists in identity (the demo console's security view uses it) but MS4 does not log in with it.
+- ~~Outbox pattern.~~ Superseded: MS4 has a minimal own outbox (`OutboxMessages`, §5).
 - Event schema versioning (contracts are shared via the `Nur.Tricenter.Integration` kernel package).
 
 ---
@@ -211,19 +211,24 @@ MS4 runs in two modes from the same code, switched purely by configuration:
 | Postgres | own container | shared `nur-tricenter-postgres`, DB `ms4_delivery_calendar` |
 | Consul | off (`ServiceRegistration:ServiceDiscoveryAddress` blank) | registers as `delivery-calendar` → gateway route `/api/delivery-calendar/**` |
 | Auth | JWT, dev key injected by AppHost (`Parameters:jwt-secret`) | JWT, same dev key as identity |
-| MS2 | `MockCatalogPort` (`Catalog:UseMock=true`) | `HttpCatalogPort` via gateway, service account `ms4-service` |
-| RabbitMQ | not used | `src/WorkerService` consumes `ms4.meal-plan-published`, `ms4.recipe-updated`, `ms4.delivery-added-to-route`, `ms4.delivery-completed`, `ms4.delivery-failed` |
+| Catalog | `MockCatalogPort` (`Catalog:UseMock=true`) | `ProjectedCatalogPort` over `PlanDayMenus` (`Catalog:UseMock=false`); no HTTP to MS2 |
+| RabbitMQ | not used | `src/WorkerService` consumes `ms4.contract-activated`, `ms4.meal-plan-composition-changed`, `ms4.meal-plan-published`, `ms4.recipe-updated`, `ms4.delivery-added-to-route`, `ms4.delivery-completed`, `ms4.delivery-failed` and publishes `production-order-ready` through its outbox |
 | Schema | migrate + seed on startup (Development) | `--migrate` one-shot job; seed off |
 
 **Platform pieces and where they live:**
 - Kernels: `Nur.Tricenter.Access` (scopes `DeliveryCalendarPermission`, added to the kernel in 1.1.0), `Nur.Tricenter.Security` (`AddSecurity`), `Nur.Tricenter.Integration` (message contracts). `Nur.Tricenter.Observability` is deliberately NOT used — ServiceDefaults already registers the same OTel pipeline. Feed: GitHub Packages (`NuGet.config`, needs `NUGET_USERNAME`/`NUGET_TOKEN`).
 - Scopes per endpoint: `Api/Endpoints/Calendars/Calendars.cs` (`RequireAuthorization`). `/health` and `/alive` are anonymous and mapped in every environment (Consul probes `/health`).
-- Consul: `Infrastructure/ServiceDiscovery/`. Inbox + projections + consumers: `Infrastructure/Messaging/`. MS2 adapter + service-account token: `Infrastructure/Catalog/`.
+- Consul: `Infrastructure/ServiceDiscovery/`. Inbox + projections + consumers: `Infrastructure/Messaging/`. Catalog adapters: `Infrastructure/Catalog/` (`MockCatalogPort`; `ProjectedCatalogPort` lives next to its `PlanDayMenu` projection in `Infrastructure/Messaging/PlanDayMenus.cs`). Outbox (`OutboxMessage`, `ProductionOrderEvents`, `OutboxPublisher`, `OutboxDispatcher`): `Infrastructure/Messaging/Outbox.cs`.
 - Platform compose fragment: `ms4.compose.yml` (bind-mounts `artifacts/bin/<Project>/debug` — this repo sets `ArtifactsPath`).
 
 **Domain changes the integration forced:** MS2 plans have several recipes per day, keyed by day number. `DeliveryDay` therefore has `DayNumber` (fixed at creation; rescheduling keeps it) and a `Menu` owned collection (`MenuItem`: meal time, recipe id/name, rations); `Portions` = total rations. `RecipeRef`/`RecipeReference` were removed.
 
+**Outbox (minimal, own):** `Joseco.Outbox.EFCore` is not used because it pins MediatR 12 / EF Core 9 and MS4 runs MediatR 14 / EF Core 10. `ResolveDailyCatalogCommandHandler` stages the kernel `ProductionOrderReady` snapshot through `IProductionOrderEvents` (an `OutboxMessages` row, jsonb payload); for an existing order it commits with the updated lines in ONE `SaveChanges`, for a new order the order is saved first because its id is database-generated and travels in the event (a rerun recovers a crash between the two). The worker's `OutboxDispatcher` (every 5 s, `OutboxPublisher`) publishes oldest-first through `IExternalPublisher` to `production-order-ready` (`declareDestination: true`), stamps `PublishedAt`, and stops the batch on the first failure. The payload keeps its message id, so a retry is a duplicate the consumers' inbox drops.
+
 **Gotchas:**
+- **`ContractActivatedConsumer` acknowledges data the command rejects** (`ValidationException`: bad duration, duration vs. plan) instead of throwing: a retry would fail the same way.
+- **`MealPlanCompositionChanged` is a full snapshot per day; an older one is ignored** by `PlanDayMenu.SnapshotAt` (compared with the message's `CreatedAt`). A day absent from the message keeps its row.
+- **No backfill:** a plan created before the deploy has no `PlanDayMenus` rows; its days stay `Scheduled` until MS2 publishes a composition for it.
 - **`Jwt:SecretKey` is mandatory at host build** (the kernel throws). Tests set it in `WebApiFactory`; `dotnet ef` needs `Jwt__SecretKey=<anything>` in the environment; build-time OpenAPI generation gets a throwaway key (`DependencyInjection.AddPlatformSecurity`).
 - **`--migrate` must be stripped from `args`** before `WebApplication.CreateBuilder` — the command-line config provider rejects a bare switch.
 - **Consumer decorators take the concrete inner consumer** (`IdempotentConsumer<T, TInner>`), never `IIntegrationMessageConsumer<T>`: Joseco registers the pipeline under that interface, so injecting it is a DI cycle.

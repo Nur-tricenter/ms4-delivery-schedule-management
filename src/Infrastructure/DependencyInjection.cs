@@ -42,19 +42,17 @@ public static class DependencyInjection
         builder.Services.AddScoped<IClock, SystemClock>();
         builder.Services.AddScoped<IPlanCatalog, PlanCatalog>();
         builder.Services.AddScoped<IDeliveryRouteLinks, DeliveryRouteLinks>();
+        builder.Services.AddScoped<IProductionOrderEvents, ProductionOrderEvents>();
         builder.AddCatalogPort();
     }
 
     /// <summary>
     /// <c>Catalog:UseMock=true</c> (default; standalone Aspire and tests) → deterministic fixture.
-    /// Otherwise the real MS2 adapter, through the platform gateway, authenticated as MS4's service
-    /// account. Resilience (retry/timeout/circuit breaker) comes from ServiceDefaults'
-    /// <c>ConfigureHttpClientDefaults</c>, applied to every HttpClient.
+    /// Otherwise the projection of MS2's meal plan compositions (<see cref="ProjectedCatalogPort"/>).
     /// </summary>
     private static void AddCatalogPort(this IHostApplicationBuilder builder)
     {
         builder.Services.Configure<CatalogOptions>(builder.Configuration.GetSection(CatalogOptions.SectionName));
-        builder.Services.Configure<IdentityClientOptions>(builder.Configuration.GetSection(IdentityClientOptions.SectionName));
 
         var catalog = builder.Configuration.GetSection(CatalogOptions.SectionName).Get<CatalogOptions>() ?? new CatalogOptions();
         if (catalog.UseMock)
@@ -63,16 +61,6 @@ public static class DependencyInjection
             return;
         }
 
-        Guard.Against.NullOrWhiteSpace(catalog.BaseUrl, message: "Catalog:BaseUrl is required when Catalog:UseMock is false.");
-        var identity = builder.Configuration.GetSection(IdentityClientOptions.SectionName).Get<IdentityClientOptions>() ?? new IdentityClientOptions();
-        Guard.Against.NullOrWhiteSpace(identity.BaseUrl, message: "Identity:BaseUrl is required when Catalog:UseMock is false.");
-
-        builder.Services.AddHttpClient(ServiceAccountTokenProvider.HttpClientName,
-            client => client.BaseAddress = new Uri(identity.BaseUrl));
-        builder.Services.AddSingleton<ServiceAccountTokenProvider>();
-        builder.Services.AddTransient<ServiceAccountTokenHandler>();
-
-        builder.Services.AddHttpClient<ICatalogPort, HttpCatalogPort>(client => client.BaseAddress = new Uri(catalog.BaseUrl))
-            .AddHttpMessageHandler<ServiceAccountTokenHandler>();
+        builder.Services.AddScoped<ICatalogPort, ProjectedCatalogPort>();
     }
 }

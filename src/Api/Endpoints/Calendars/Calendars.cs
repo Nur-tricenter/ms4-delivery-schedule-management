@@ -145,7 +145,7 @@ public partial class Calendars : IEndpointGroup
             .WithSummary("[Step 4 · Internal] Run daily catalog resolution")
             .WithDescription(
                 "Caller: internal/ops — not part of the public MS4 contract. " +
-                "Resolves recipe and portions for all Scheduled days whose date is tomorrow (via the mocked ICatalogPort), " +
+                "Resolves recipe and portions for all Scheduled days whose date is tomorrow (from the projection of MS2's meal plan compositions) and stages the ProductionOrderReady event, " +
                 "moving them to ReadyForProduction. " +
                 "Must run before calling active-tomorrow (Step 5) or the response will be empty. " +
                 "Optional 'date' query param overrides which date is treated as 'tomorrow'.")

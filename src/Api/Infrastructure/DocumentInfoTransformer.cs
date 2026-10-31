@@ -25,7 +25,7 @@ internal sealed class DocumentInfoTransformer : IOpenApiDocumentTransformer
             | Inbound | **MS3** (scheduling engine) | `POST /schedule`, `GET /calendars/active-tomorrow` |
             | Inbound | **Frontend** (patient) | Set address, reschedule date, cancel day |
             | Inbound | **MS5** (delivery agent app) | `PATCH /calendars/days/{dayId}/delivery-result` |
-            | Outbound | **MS2** (`ICatalogPort`) | `GET /catalog/plans/{id}/day/{date}` — **mocked at this stage** |
+            | Outbound | none over HTTP | `ICatalogPort` reads the projection of MS2's `MealPlanCompositionChanged` events (mocked standalone); `ProductionOrderReady` goes out as an event |
 
             ---
 

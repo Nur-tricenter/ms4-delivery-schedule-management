@@ -6,8 +6,10 @@ backend, no frontend. Built with .NET Aspire + Clean Architecture, Postgres via 
 
 Part of the Nur-Tricenter platform: registers in Consul as `delivery-calendar`, is reached through
 the API gateway at `/api/delivery-calendar/v1/...`, validates JWTs minted by nur-tricenter-identity,
-reads meal plans from MS2 (ms2-plans-and-recipes-catalog) and consumes MS2's RabbitMQ events. It
-also runs standalone under Aspire, with the MS2 catalog mocked. See [Run](#run).
+and talks to the other services only through RabbitMQ events (no outbound HTTP): it consumes MS2's
+meal plan events, MS3's `ContractActivated` and MS5's delivery events, and publishes
+`ProductionOrderReady`. It also runs standalone under Aspire, with the MS2 catalog mocked. See
+[Run](#run).
 
 See [`CLAUDE.md`](./CLAUDE.md) for the full domain spec and implementation roadmap.
 See [`FLOWS.md`](./FLOWS.md) for every use case, its expected behavior, error scenarios, and edge
@@ -231,23 +233,24 @@ flowchart TD
         ICALR["ICalendarRepository"]
         IPOR["IProductionOrderRepository"]
         ICP["ICatalogPort"]
+        IPOE["IProductionOrderEvents"]
         ICL["IClock — 48h rule checks"]
     end
 
     subgraph INFRA["Infrastructure"]
         DB[("Postgres")]
         MOCK["MockCatalogPort\nstandalone + tests"]
-        HTTP["HttpCatalogPort\nplatform, service account ms4-service"]
-        MS2["MS2 — Catalog\nGET /api/catalog/v1/meal-plans/{id}\nvia gateway"]
-        MQ["RabbitMQ\nms4.meal-plan-published\nms4.recipe-updated\nms4.delivery-added-to-route\nms4.delivery-completed\nms4.delivery-failed"]
-        WRK["WorkerService\nidempotent inbox → projections"]
+        PROJ["ProjectedCatalogPort\nplatform: reads PlanDayMenus"]
+        OBX["OutboxMessages\nProductionOrderReady"]
+        MQ["RabbitMQ\nms4.contract-activated\nms4.meal-plan-composition-changed\nms4.meal-plan-published\nms4.recipe-updated\nms4.delivery-added-to-route\nms4.delivery-completed\nms4.delivery-failed\nproduction-order-ready (published)"]
+        WRK["WorkerService\nidempotent inbox → projections\noutbox dispatcher"]
     end
 
-    MS3 -->|"1 create calendar"| DC
+    MS3 -->|"1 ContractActivated event → create calendar"| DC
     FE  -->|"2 address / reschedule / cancel"| DD
     DD  -->|"3 daily job: Scheduled -> ReadyForProduction"| OCS
     OCS -->|"4 build order"| PO
-    MS3 -->|"5 read order"| PO
+    PO -->|"5 ProductionOrderReady event → MS3"| OBX
     MS5 -->|"6 record result"| DD
 
     ICALR <-->|persists| AGG1
@@ -256,10 +259,11 @@ flowchart TD
     IPOR  --- DB
 
     ICP --> MOCK
-    ICP --> HTTP
-    HTTP -->|"plan day by DayNumber"| MS2
-    MS2 -.->|events| MQ
-    MQ --> WRK
+    ICP --> PROJ
+    IPOE --> OBX
+    OBX -->|"dispatcher, every 5 s"| MQ
+    MQ -->|"MealPlanCompositionChanged etc."| WRK
+    WRK -->|"projects plan day menus"| PROJ
     WRK --- DB
     ICL  -.->|"injects now"| DD
 ```
@@ -313,7 +317,8 @@ nurtricenter/nur-tricenter-local/scripts/start-stack.ps1     # or start-stack.sh
 
 The script builds every service (MS4 included), starts Postgres/RabbitMQ/Consul, the gateway,
 identity, the catalog, MS4 (`--migrate` job → API → RabbitMQ worker) and MS5, and creates MS4's
-service account `ms4-service` (scope `catalog.mealPlan:read`) in identity. Then:
+service account `ms4-service` in identity (the demo console's security view uses it; MS4 itself no
+longer logs in anywhere). Then:
 
 - MS4 is reachable only through the gateway: `http://localhost:15005/api/delivery-calendar/v1/...`
 - Log in with `POST http://localhost:15005/api/identity-service/v1/auth/login` (`admin`/`admin`) and
@@ -611,8 +616,8 @@ The daily catalog job (`POST /calendars/resolve-daily-catalog`) must run **befor
 
 | Caller | Endpoint | When |
 |---|---|---|
-| **MS3** (contracting) | `POST /api/v1/schedule` | After patient payment is confirmed — creates the delivery calendar |
-| **MS3** (contracting) | `GET /api/v1/calendars/active-tomorrow` | Daily — retrieves all addresses and plan IDs for next-day production planning |
+| **MS3** (contracting) | *(none — event `contract-activated`)* | After patient payment is confirmed MS3 publishes `ContractActivated`; MS4 creates the delivery calendar. `POST /api/v1/schedule` stays for ops and tests |
+| **MS3** (contracting) | *(none — event `production-order-ready`)* | MS4 publishes the next-day production order after `resolve-daily-catalog`; MS3 projects it. `GET /api/v1/calendars/active-tomorrow` stays for the frontend and ops; no service calls it |
 | **Frontend** (patient app) | `PUT /api/v1/calendars/{id}/dates` | Patient reschedules a delivery day |
 | **Frontend** (patient app) | `POST /api/v1/calendars/{id}/addresses` | Patient sets or updates a delivery address |
 | **Frontend** (patient app) | `POST /api/v1/calendars/{id}/cancel-day` | Patient cancels a delivery day |
@@ -621,15 +626,19 @@ The daily catalog job (`POST /calendars/resolve-daily-catalog`) must run **befor
 
 ### What MS4 calls outbound
 
-| Dependency | Endpoint | Purpose | Current state |
-|---|---|---|---|
-| **MS2** (catalog) | `GET /api/catalog/v1/meal-plans/{id}` (via gateway) | Fetch the plan's composition and take plan day `DayNumber`'s menu (meal times, recipes, rations) | **Real** on the platform (`HttpCatalogPort`, service account `ms4-service`); mocked (`MockCatalogPort`) standalone and in tests |
-| **identity** | `POST /api/identity-service/v1/auth/login` (via gateway) | Service-account token for the MS2 call | Platform only |
+Nothing over HTTP. There is no service-to-service REST: every dependency is an event.
+
+| Direction | Event | Purpose |
+|---|---|---|
+| Publishes | `ProductionOrderReady` → `production-order-ready` | Full snapshot of a delivery date's production order (lines with address, coordinates and menu). Staged in the `OutboxMessages` table in the same save as the order; the worker's `OutboxDispatcher` publishes it every 5 s and stamps `PublishedAt` |
+| Reads | `MealPlanCompositionChanged` (from MS2), stored in `PlanDayMenus` | `ProjectedCatalogPort` serves plan day `DayNumber`'s menu from this projection. `MockCatalogPort` stays for Aspire and tests (`Catalog:UseMock=true`) |
 
 ### Events MS4 consumes (RabbitMQ, `src/WorkerService`)
 
 | Queue | Event (MS2) | Effect in MS4 |
 |---|---|---|
+| `ms4.contract-activated` | `ContractActivated` (MS3) | Sends `CreateScheduleCommand` (idempotent by contract id). Data the command rejects (bad duration, duration vs. plan) is logged and acknowledged, not retried |
+| `ms4.meal-plan-composition-changed` | `MealPlanCompositionChanged` (MS2) | Upserts the plan's day menus into `PlanDayMenus`; a snapshot older than the stored one (by `CreatedAt`) is ignored |
 | `ms4.meal-plan-published` | `MealPlanPublished` | Projects the plan into `PlanCatalog`; `POST /schedule` rejects a duration that contradicts it (400) |
 | `ms4.recipe-updated` | `RecipeUpdated` | Refreshes the recipe-name snapshot on open delivery days |
 | `ms4.delivery-added-to-route` | `DeliveryAddedToRoute` (MS5) | Links the MS5 `DeliveryId` to a delivery day in `DeliveryRouteLinks`: the day named by `DeliveryDayId` (MS4's `packId`, carried end to end since kernel 1.4.0), then by `PackageId` when it is MS4's `packId`, otherwise the patient's earliest `ReadyForProduction`/`InProduction` day not linked yet (packages from MS3's `package-validated` carry MS3's GUID). No match → ignored |
@@ -637,6 +646,8 @@ The daily catalog job (`POST /calendars/resolve-daily-catalog`) must run **befor
 | `ms4.delivery-failed` | `DeliveryFailed` (MS5) | Marks the linked day `Failed` |
 
 Each message passes through an idempotent inbox (`InboxMessages`), so redeliveries are no-ops.
+
+Known limit: there is no backfill, so a plan created before this deploy has no `PlanDayMenus` rows and its days stay `Scheduled` until MS2 publishes a composition for it (any change to the plan does). MS2 emits one snapshot per assignment, so many messages fly while a plan is being composed; MS4 keeps the latest.
 
 The delivery consumers never fail on business grounds: an unlinked delivery, a missing day, or a day that can no longer take a result (e.g. cancelled) is logged and acknowledged, because a retry could not succeed. `PATCH /delivery-result` stays as the manual path.
 
@@ -656,8 +667,9 @@ See `CLAUDE.md` §5 "Cross-service integration gaps" for the full audit details.
 
 ## Notes for local dev
 
-- Standalone, `ICatalogPort` (outbound call to MS2) is mocked — `MockCatalogPort` returns a
-  deterministic three-meal menu per plan day, no real network call (`Catalog:UseMock=true`).
+- Standalone, `ICatalogPort` is mocked — `MockCatalogPort` returns a deterministic three-meal menu
+  per plan day (`Catalog:UseMock=true`). On the platform it is `ProjectedCatalogPort`, which reads
+  MS4's own projection of MS2's events; there is no outbound HTTP either way.
 - Seed data loads automatically on first run against an empty database (`dotnet run --project
   src/AppHost`, Development environment only): 3 patients with fixed GUIDs
   (`aaaaaaaa-0000-0000-0000-000000000001/2/3`) covering `Pending`, `Scheduled`,
@@ -905,9 +917,9 @@ MS4 recibe llamadas de tres fuentes: de **MS3** para crear calendarios y consult
 
 Todas esas llamadas entran por el **API gateway** de la plataforma Nur-Tricenter, en `/api/delivery-calendar/v1/...`, y deben traer un token JWT emitido por el servicio de **identity**. Cada endpoint exige un permiso (scope) específico: por ejemplo, crear calendarios requiere `deliveryCalendar.calendar:create` y registrar resultados de entrega requiere `deliveryCalendar.deliveryResult:edit`. Sin token la respuesta es 401; con un token sin el permiso, 403.
 
-En sentido saliente, MS4 depende de **MS2** (el catálogo de planes). Para resolver el menú de cada día llama al endpoint real de MS2, `GET /api/catalog/v1/meal-plans/{id}`, a través del gateway, y toma el día del plan que corresponde por su número. Para esa llamada MS4 se autentica con su propia cuenta de servicio, `ms4-service`, que solo tiene permiso de lectura de planes. Cuando MS4 corre solo (con Aspire, o en las pruebas) esa dependencia se reemplaza por un adaptador simulado (`MockCatalogPort`) con datos fijos.
+MS4 no longer calls any other service over HTTP. The menu of each day comes from MS4's own projection of the meal plan compositions MS2 publishes (`ProjectedCatalogPort`), calendars are created from MS3's `ContractActivated` event, and the production order leaves as the `ProductionOrderReady` event (outbox table + dispatcher in the worker). When MS4 runs alone (Aspire, tests) the catalog is replaced by a fixture adapter (`MockCatalogPort`).
 
-Además, MS4 **escucha eventos** de MS2 por **RabbitMQ**, en un proceso aparte (`WorkerService`): cuando se publica un plan guarda una copia local de sus datos básicos (para rechazar un calendario cuya duración no coincide con el plan), y cuando se actualiza una receta refresca su nombre en los días de entrega abiertos. Cada mensaje pasa por una bandeja de entrada idempotente, así que un mensaje repetido no tiene efecto.
+MS4 also **listens to events** over **RabbitMQ**, in a separate process (`WorkerService`): when a plan is published it keeps a local copy of its basic data (para rechazar un calendario cuya duración no coincide con el plan), y cuando se actualiza una receta refresca su nombre en los días de entrega abiertos. Cada mensaje pasa por una bandeja de entrada idempotente, así que un mensaje repetido no tiene efecto.
 
 MS4 también escucha los eventos de entrega de MS5 (entrega añadida a una ruta, completada y fallida) para cerrar cada día como Delivered o Failed. El día se identifica con el `DeliveryDayId` (el packId de MS4) que viaja de MS3 a MS5 y de vuelta a MS4; si el mensaje no lo trae, se usa el identificador del paquete cuando es numérico y, en último caso, el día más próximo del paciente que esté en producción.
 
@@ -928,7 +940,7 @@ El microservicio está construido con **.NET 10** y usa **.NET Aspire** para orq
 El mismo código corre en dos modos, que solo cambian por configuración:
 
 - **Solo, con Aspire**: Aspire levanta su propio PostgreSQL en Docker, aplica las migraciones, carga datos de prueba y usa el catálogo simulado. La interfaz de exploración de la API es **Scalar** (equivalente moderno de Swagger), accesible desde el dashboard de Aspire.
-- **En la plataforma Nur-Tricenter**: el repositorio `nur-tricenter-local` levanta todo el ecosistema con Docker Compose (PostgreSQL, RabbitMQ y Consul compartidos, gateway, identity, MS2, MS4 y MS5). MS4 usa su propia base de datos dentro del PostgreSQL compartido, se registra en **Consul** como `delivery-calendar` para que el gateway lo encuentre, aplica su esquema con un contenedor de migración de una sola ejecución, y llama al MS2 real.
+- **En la plataforma Nur-Tricenter**: el repositorio `nur-tricenter-local` levanta todo el ecosistema con Docker Compose (PostgreSQL, RabbitMQ y Consul compartidos, gateway, identity, MS2, MS4 y MS5). MS4 usa su propia base de datos dentro del PostgreSQL compartido, se registra en **Consul** como `delivery-calendar` para que el gateway lo encuentre, applies its schema with a one-shot migration container, and talks to the rest of the platform through events only.
 
 Los permisos, la validación de tokens y los contratos de los mensajes vienen de los **shared kernels** de la plataforma, paquetes NuGet compartidos por todos los microservicios.
 
@@ -976,7 +988,7 @@ Para ejecutar la demostración: importar el archivo en Postman, configurar la va
 
 El microservicio está completamente implementado y probado en todas las capas. Las siete etapas de implementación planificadas originalmente están terminadas: scaffolding, modelo de dominio, capa de aplicación, infraestructura, endpoints de API, datos de prueba y pruebas de aceptación.
 
-Además, MS4 ya está integrado a la plataforma Nur-Tricenter: vive en la organización como `Nur-tricenter/ms4-delivery-schedule-management`, se descubre por Consul, se accede por el gateway con tokens de identity, resuelve los menús contra el MS2 real y consume sus eventos por RabbitMQ.
+Además, MS4 ya está integrado a la plataforma Nur-Tricenter: vive en la organización como `Nur-tricenter/ms4-delivery-schedule-management`, se descubre por Consul, is reached through the gateway with identity tokens, and exchanges events over RabbitMQ (it resolves menus from MS2's published compositions and publishes `ProductionOrderReady`).
 
 Los pendientes dependen de otros equipos:
 
