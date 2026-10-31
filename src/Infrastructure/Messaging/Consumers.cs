@@ -184,7 +184,8 @@ internal static class DeliveryOutcome
 
 /// <summary>
 /// <c>ms4.delivery-completed</c> -> delivery day becomes <c>Delivered</c> (same rule as
-/// <c>PATCH .../delivery-result</c>). The event carries no photo or signature, only the timestamp.
+/// <c>PATCH .../delivery-result</c>). The photo and signature come from the event (kernel 1.5.0); an older
+/// message without them still closes the day with just the timestamp.
 /// </summary>
 public sealed class DeliveryCompletedConsumer(
     ApplicationDbContext context,
@@ -193,8 +194,28 @@ public sealed class DeliveryCompletedConsumer(
     public Task HandleAsync(DeliveryCompleted message, CancellationToken cancellationToken = default)
     {
         var deliveredAt = new DateTimeOffset(DateTime.SpecifyKind(message.DeliveredAt, DateTimeKind.Utc));
+        var evidence = new DeliveryEvidence(
+            deliveredAt,
+            Fit(message.EvidencePhotoUrl, message.DeliveryId, "photo"),
+            Fit(message.DigitalSignature, message.DeliveryId, "signature"));
         return DeliveryOutcome.ApplyAsync(context, logger, message.DeliveryId, DeliveryResult.Delivered,
-            new DeliveryEvidence(deliveredAt), deliveredAt, cancellationToken);
+            evidence, deliveredAt, cancellationToken);
+    }
+
+    /// <summary>
+    /// The evidence columns hold 1000 characters. A longer value (e.g. an inline base64 signature) would fail
+    /// the save on every retry and block the day from closing, so it is dropped with a warning instead.
+    /// </summary>
+    private string? Fit(string? value, Guid deliveryId, string what)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+        if (value.Length <= DeliveryEvidence.MaxLength)
+            return value;
+
+        logger.LogWarning("Delivery {DeliveryId}: {What} evidence is {Length} characters (max {Max}); not stored.",
+            deliveryId, what, value.Length, DeliveryEvidence.MaxLength);
+        return null;
     }
 }
 

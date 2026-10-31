@@ -60,8 +60,8 @@ public class DeliveryDayConfiguration : IEntityTypeConfiguration<DeliveryDay>
         builder.OwnsOne(d => d.Evidence, o =>
         {
             o.Property(x => x.RecordedAt).HasColumnName("EvidenceRecordedAt");
-            o.Property(x => x.PhotoUrl).HasColumnName("EvidencePhotoUrl").HasMaxLength(1000);
-            o.Property(x => x.SignatureUrl).HasColumnName("EvidenceSignatureUrl").HasMaxLength(1000);
+            o.Property(x => x.PhotoUrl).HasColumnName("EvidencePhotoUrl").HasMaxLength(Domain.ValueObjects.DeliveryEvidence.MaxLength);
+            o.Property(x => x.SignatureUrl).HasColumnName("EvidenceSignatureUrl").HasMaxLength(Domain.ValueObjects.DeliveryEvidence.MaxLength);
         });
     }
 }

@@ -147,9 +147,13 @@ public class MessagingConsumerTests : RepositoryTestBase
             },
             ctx => new DeliveryAddedToRouteConsumer(ctx, TimeProvider.System, NullLogger<DeliveryAddedToRouteConsumer>.Instance));
 
-    private static Task CompleteAsync(Guid deliveryId) =>
+    private static Task CompleteAsync(Guid deliveryId, string? photoUrl = null, string? signature = null) =>
         HandleAsync(
-            new DeliveryCompleted("corr-4", "ms5") { DeliveryId = deliveryId, RouteId = Guid.NewGuid(), DeliveredAt = DateTime.UtcNow },
+            new DeliveryCompleted("corr-4", "ms5")
+            {
+                DeliveryId = deliveryId, RouteId = Guid.NewGuid(), DeliveredAt = DateTime.UtcNow,
+                EvidencePhotoUrl = photoUrl, DigitalSignature = signature
+            },
             ctx => new DeliveryCompletedConsumer(ctx, NullLogger<DeliveryCompletedConsumer>.Instance));
 
     private static async Task<Domain.Enums.DayStatus> StatusOfAsync(int dayId)
@@ -173,6 +177,40 @@ public class MessagingConsumerTests : RepositoryTestBase
         var day = loaded!.Days.Single(d => d.Id == dayId);
         day.Status.ShouldBe(Domain.Enums.DayStatus.Delivered);
         day.Evidence.ShouldNotBeNull();
+    }
+
+    [Test]
+    public async Task DeliveryCompleted_WithPhotoAndSignature_ShouldStoreThemAsEvidence()
+    {
+        var dayId = await SaveReadyDayAsync();
+        var deliveryId = Guid.NewGuid();
+
+        await LinkAsync(deliveryId, dayId.ToString());
+        await CompleteAsync(deliveryId, "https://example.org/f.jpg", "https://example.org/firma.png");
+
+        await using var context = IntegrationTestSetup.CreateContext();
+        var loaded = await new CalendarRepository(context).GetByDeliveryDayIdAsync(dayId, CancellationToken.None);
+        var evidence = loaded!.Days.Single(d => d.Id == dayId).Evidence;
+        evidence.ShouldNotBeNull();
+        evidence.PhotoUrl.ShouldBe("https://example.org/f.jpg");
+        evidence.SignatureUrl.ShouldBe("https://example.org/firma.png");
+    }
+
+    [Test]
+    public async Task DeliveryCompleted_WithASignatureLongerThanTheColumn_ShouldStillCloseTheDay_WithoutIt()
+    {
+        var dayId = await SaveReadyDayAsync();
+        var deliveryId = Guid.NewGuid();
+
+        await LinkAsync(deliveryId, dayId.ToString());
+        await CompleteAsync(deliveryId, "https://example.org/f.jpg", new string('x', Domain.ValueObjects.DeliveryEvidence.MaxLength + 1));
+
+        await using var context = IntegrationTestSetup.CreateContext();
+        var loaded = await new CalendarRepository(context).GetByDeliveryDayIdAsync(dayId, CancellationToken.None);
+        var day = loaded!.Days.Single(d => d.Id == dayId);
+        day.Status.ShouldBe(Domain.Enums.DayStatus.Delivered);
+        day.Evidence!.PhotoUrl.ShouldBe("https://example.org/f.jpg");
+        day.Evidence.SignatureUrl.ShouldBeNull();
     }
 
     [Test]
