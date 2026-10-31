@@ -40,7 +40,7 @@ public class GetActiveTomorrowQueryTests
 
         var resolveClock = new TestClock(new DateTimeOffset(deliveryDate.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero).AddDays(-1));
         var resolveHandler = new ResolveDailyCatalogCommandHandler(
-            calendarRepository, orderRepository, new FakeCatalogPort(), new FakeApplicationDbContext(), resolveClock,
+            calendarRepository, orderRepository, new FakeCatalogPort(), new FakeProductionOrderEvents(), new FakeApplicationDbContext(), resolveClock,
             Microsoft.Extensions.Logging.Abstractions.NullLogger<ResolveDailyCatalogCommandHandler>.Instance);
         await resolveHandler.Handle(new ResolveDailyCatalogCommand(deliveryDate), CancellationToken.None);
 

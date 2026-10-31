@@ -180,6 +180,38 @@ namespace delivery_schedule_management.Infrastructure.Data.Migrations
                     b.ToTable("InboxMessages", (string)null);
                 });
 
+            modelBuilder.Entity("delivery_schedule_management.Infrastructure.Messaging.OutboxMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Destination")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTimeOffset?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PublishedAt");
+
+                    b.ToTable("OutboxMessages", (string)null);
+                });
+
             modelBuilder.Entity("delivery_schedule_management.Infrastructure.Messaging.PlanCatalogEntry", b =>
                 {
                     b.Property<Guid>("PlanId")
@@ -202,6 +234,22 @@ namespace delivery_schedule_management.Infrastructure.Data.Migrations
                     b.HasKey("PlanId");
 
                     b.ToTable("PlanCatalog", (string)null);
+                });
+
+            modelBuilder.Entity("delivery_schedule_management.Infrastructure.Messaging.PlanDayMenu", b =>
+                {
+                    b.Property<Guid>("PlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DayNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("SnapshotAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("PlanId", "DayNumber");
+
+                    b.ToTable("PlanDayMenus", (string)null);
                 });
 
             modelBuilder.Entity("delivery_schedule_management.Domain.Entities.DeliveryCalendar", b =>
@@ -374,33 +422,6 @@ namespace delivery_schedule_management.Infrastructure.Data.Migrations
                                 .HasForeignKey("DeliveryDayId");
                         });
 
-                    b.OwnsOne("delivery_schedule_management.Domain.ValueObjects.DeliveryEvidence", "Evidence", b1 =>
-                        {
-                            b1.Property<int>("DeliveryDayId")
-                                .HasColumnType("integer");
-
-                            b1.Property<string>("PhotoUrl")
-                                .HasMaxLength(1000)
-                                .HasColumnType("character varying(1000)")
-                                .HasColumnName("EvidencePhotoUrl");
-
-                            b1.Property<DateTimeOffset>("RecordedAt")
-                                .HasColumnType("timestamp with time zone")
-                                .HasColumnName("EvidenceRecordedAt");
-
-                            b1.Property<string>("SignatureUrl")
-                                .HasMaxLength(1000)
-                                .HasColumnType("character varying(1000)")
-                                .HasColumnName("EvidenceSignatureUrl");
-
-                            b1.HasKey("DeliveryDayId");
-
-                            b1.ToTable("DeliveryDays");
-
-                            b1.WithOwner()
-                                .HasForeignKey("DeliveryDayId");
-                        });
-
                     b.OwnsMany("delivery_schedule_management.Domain.ValueObjects.MenuItem", "Menu", b1 =>
                         {
                             b1.Property<int>("Id")
@@ -438,6 +459,33 @@ namespace delivery_schedule_management.Infrastructure.Data.Migrations
                             b1.HasIndex("RecipeId");
 
                             b1.ToTable("DeliveryDayMenuItems", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("DeliveryDayId");
+                        });
+
+                    b.OwnsOne("delivery_schedule_management.Domain.ValueObjects.DeliveryEvidence", "Evidence", b1 =>
+                        {
+                            b1.Property<int>("DeliveryDayId")
+                                .HasColumnType("integer");
+
+                            b1.Property<string>("PhotoUrl")
+                                .HasMaxLength(1000)
+                                .HasColumnType("character varying(1000)")
+                                .HasColumnName("EvidencePhotoUrl");
+
+                            b1.Property<DateTimeOffset>("RecordedAt")
+                                .HasColumnType("timestamp with time zone")
+                                .HasColumnName("EvidenceRecordedAt");
+
+                            b1.Property<string>("SignatureUrl")
+                                .HasMaxLength(1000)
+                                .HasColumnType("character varying(1000)")
+                                .HasColumnName("EvidenceSignatureUrl");
+
+                            b1.HasKey("DeliveryDayId");
+
+                            b1.ToTable("DeliveryDays");
 
                             b1.WithOwner()
                                 .HasForeignKey("DeliveryDayId");
@@ -631,6 +679,54 @@ namespace delivery_schedule_management.Infrastructure.Data.Migrations
 
                     b.Navigation("PlanRef")
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("delivery_schedule_management.Infrastructure.Messaging.PlanDayMenu", b =>
+                {
+                    b.OwnsMany("delivery_schedule_management.Domain.ValueObjects.MenuItem", "Items", b1 =>
+                        {
+                            b1.Property<int>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("integer");
+
+                            NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b1.Property<int>("Id"));
+
+                            b1.Property<int>("DayNumber")
+                                .HasColumnType("integer");
+
+                            b1.Property<string>("MealTime")
+                                .IsRequired()
+                                .HasMaxLength(64)
+                                .HasColumnType("character varying(64)");
+
+                            b1.Property<int>("MealTimeOrder")
+                                .HasColumnType("integer");
+
+                            b1.Property<Guid>("PlanId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<int>("Rations")
+                                .HasColumnType("integer");
+
+                            b1.Property<Guid>("RecipeId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("RecipeName")
+                                .IsRequired()
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)");
+
+                            b1.HasKey("Id");
+
+                            b1.HasIndex("PlanId", "DayNumber");
+
+                            b1.ToTable("PlanDayMenuItems", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("PlanId", "DayNumber");
+                        });
+
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("delivery_schedule_management.Domain.Entities.DeliveryCalendar", b =>

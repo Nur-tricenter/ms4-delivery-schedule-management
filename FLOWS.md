@@ -15,8 +15,9 @@ Conventions:
 
 ### A.1 — Create delivery schedule (`CreateScheduleCommand`)
 
-- **Actor**: MS3 (`POST /api/v1/schedule`).
-- **Input**: `contractId`, `patientId`, `planId`, `duration` (15|30), `startDate`.
+- **Actor**: MS3, through its `ContractActivated` event (`ms4.contract-activated`, WorkerService → `ContractActivatedConsumer` → this command). `POST /api/v1/schedule` stays for ops and tests.
+- **Input**: `contractId`, `patientId`, `planId` (`CatalogPlanId`), `duration` (`DurationDays`, 15|30), `startDate`.
+- **Event path**: data the command rejects (invalid duration, or duration that contradicts the plan) is logged and acknowledged, never retried (it would fail again); a redelivery is a no-op through the inbox and the contract-id idempotency below.
 - **Precondition**: none — this is the aggregate's entry point.
 - **Happy path**: creates a `DeliveryCalendar` in `Active` status, generates `duration` consecutive `DeliveryDay`s starting at `startDate`, all in `Status = Pending`, no address or recipe. Returns `calendarId` + the list of days.
 - **Error scenarios**:
@@ -85,12 +86,12 @@ All flows in this category operate on a `DeliveryDay` inside an already-existing
 - **Precondition**: must run **before** MS3 calls `GET /calendars/active-tomorrow` for the same date — MS4 never resolves the catalog on-demand inside that request.
 - **Happy path**:
   1. Finds every calendar with a day landing on `targetDate` (`ICalendarRepository.GetActiveForDeliveryDateAsync`).
-  2. For each day in `Status = Scheduled` on `targetDate`: calls `ICatalogPort.GetDayMenuAsync(planId, day.DayNumber)` — on the platform, MS2's `GET /api/catalog/v1/meal-plans/{planId}` through the gateway (cached per plan for the run); standalone, the deterministic mock — stores the day's `Menu` (meal time, recipe, rations) and `Portions` (total rations); day moves to `ReadyForProduction`. `DayNumber` is the plan day fixed at calendar creation, so a rescheduled day still gets its original plan day's menu.
+  2. For each day in `Status = Scheduled` on `targetDate`: calls `ICatalogPort.GetDayMenuAsync(planId, day.DayNumber)` — on the platform, `ProjectedCatalogPort` reading `PlanDayMenus`, MS4's projection of MS2's `MealPlanCompositionChanged` events (no call to MS2); standalone, the deterministic mock — stores the day's `Menu` (meal time, recipe, rations) and `Portions` (total rations); day moves to `ReadyForProduction`. `DayNumber` is the plan day fixed at calendar creation, so a rescheduled day still gets its original plan day's menu.
   3. Rebuilds/updates `targetDate`'s `ProductionOrder` via `OrderConsolidationService.Consolidate` — picks up **every** `ReadyForProduction` day for that date (not just the ones resolved in this run), across all calendars.
+  4. Stages a `ProductionOrderReady` event (`IProductionOrderEvents`) with the full snapshot — lines with address, coordinates and each day's menu — as an `OutboxMessages` row. For an existing order the row commits in the same save as the updated lines; a new order is saved first (its id is database-generated and travels in the event). The worker's `OutboxDispatcher` publishes it to `production-order-ready` every 5 s and stamps `PublishedAt`; MS3 projects it. Every run stages a new snapshot, so re-running after a lost publish recovers it.
 - **Error scenarios**:
   - A `Scheduled` day with no `Address` assigned, at consolidation time → `InvalidDeliveryDayTransitionException` (thrown by `OrderConsolidationService`, not by the job) — a day with no address should never actually reach `ReadyForProduction` in practice because `MarkReadyForProduction` doesn't validate this; it's a cross-step invariant to watch in Stage 7.
-  - MS2 has no menu for that plan/day (unknown plan, day without recipes) → the day is **skipped and logged**, stays `Scheduled`.
-  - MS2 unreachable / 5xx / service account rejected → that day is **skipped and logged**, stays `Scheduled`; the rest of the run continues. Re-running the job (idempotent) is the recovery path.
+  - No menu for that plan/day in the projection (MS2 has not published the plan's composition yet, or the day has no recipes) → the day is **skipped and logged**, stays `Scheduled`. Re-running the job once the composition arrives is the recovery path.
   - `Pending` days (no address) on `targetDate` — silently ignored (not resolved, not added to the order). They stay pending until the patient assigns an address and the job runs again.
 - **Idempotency / re-runs**: running the job twice for the same date is safe. If a `ProductionOrder` already exists for `targetDate`, `ReplaceLines` is called (replaces all lines, updates `GeneratedAt`) instead of creating a duplicate — also enforced by a unique index on `ProductionOrders.DeliveryDate`.
 - **Test coverage**: `ResolveDailyCatalogCommandTests`, `OrderConsolidationServiceTests`.
@@ -131,7 +132,7 @@ All flows in this category operate on a `DeliveryDay` inside an already-existing
 
 ### E.2 — Active production order for tomorrow (`GetActiveTomorrowQuery`)
 
-- **Actor**: MS3 (`GET /api/v1/calendars/active-tomorrow`), dual purpose: auxiliary query **and** the mechanism by which MS3 obtains the daily production order (replaces the async `ProductionOrderRequired` event).
+- **Actor**: frontend / ops (`GET /api/v1/calendars/active-tomorrow`). MS3 no longer calls it: it receives the same data as the `ProductionOrderReady` event (see C.1) and projects it locally.
 - **Input**: optional `date` (default: tomorrow relative to `IClock.Now`).
 - **Precondition**: assumes C.1 (`ResolveDailyCatalogCommand`) already ran for that date. **This query never triggers on-demand resolution.**
 - **Happy path**: reads the already-consolidated `ProductionOrder` for the date, returns its lines mapped to `{ packId, patientId, planId, hour, address, lat, long, menu }`, where `menu` is the day's menu snapshot (meal times, recipes, rations). `packId` maps to `DeliveryDayId` (there's no separate "pack" concept in the domain — it's the closest identifiable delivery unit, a design decision documented in `GetActiveTomorrowQuery.cs`).
@@ -190,5 +191,5 @@ Any transition not listed above throws `InvalidDeliveryDayTransitionException`. 
 
 - Per-patient authorization — every endpoint requires a JWT with its `deliveryCalendar.*` scope (401 without a token, 403 with the wrong scope), but nothing checks that a frontend caller owns the calendar it edits (see `CLAUDE.md` §5, known gap).
 - Explicit transition to `InProduction`.
-- Outbox for `ICatalogPort` — transient MS2 failures are retried by the HTTP resilience handler (ServiceDefaults); a day that still fails stays `Scheduled` until the next run.
+- Backfill of the `PlanDayMenus` projection — a plan created before the deploy is projected only when MS2 publishes a composition for it; until then its days stay `Scheduled`.
 - Automatic trigger (cron/`BackgroundService`) for C.1 — resolved as manual trigger, see `CLAUDE.md` §5.

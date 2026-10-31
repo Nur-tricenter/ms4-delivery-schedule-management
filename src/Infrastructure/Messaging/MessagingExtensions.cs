@@ -5,6 +5,7 @@ using Joseco.Communication.External.RabbitMQ;
 using Joseco.Communication.External.RabbitMQ.Services;
 using Microsoft.Extensions.Configuration;
 using Nur.Tricenter.Integration.Messages.Catalog;
+using Nur.Tricenter.Integration.Messages.Contracting;
 using Nur.Tricenter.Integration.Messages.Logistics;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -18,6 +19,11 @@ namespace Microsoft.Extensions.DependencyInjection;
 /// <c>topology/rabbitmq-definitions.json</c> owns them (<c>{consumer}.{exchange}</c> naming). Joseco
 /// 1.1.0 ignores <c>RabbitMqSettings:Port</c>, so the broker must listen on 5672.
 /// <para>
+/// Publishing: MS4 stages <c>ProductionOrderReady</c> in its own <c>OutboxMessages</c> table and the
+/// <see cref="OutboxDispatcher"/> registered here publishes it to <c>production-order-ready</c>
+/// (the exchange is declared on first publish, like every other publisher on the platform).
+/// </para>
+/// <para>
 /// Not consumed on purpose (queues exist but nothing in MS4 uses them): <c>ms4.recipe-published</c>
 /// (a recipe can't be on a resolved menu before it exists), <c>ms4.food-*</c>, <c>ms4.user-*</c>.
 /// </para>
@@ -29,6 +35,8 @@ public static class MessagingExtensions
     public const string DeliveryAddedToRouteQueue = "ms4.delivery-added-to-route";
     public const string DeliveryCompletedQueue = "ms4.delivery-completed";
     public const string DeliveryFailedQueue = "ms4.delivery-failed";
+    public const string ContractActivatedQueue = "ms4.contract-activated";
+    public const string MealPlanCompositionChangedQueue = "ms4.meal-plan-composition-changed";
 
     public static IServiceCollection AddPlatformMessaging(this IServiceCollection services, IConfiguration configuration)
     {
@@ -44,6 +52,11 @@ public static class MessagingExtensions
         services.AddConsumer<DeliveryAddedToRoute, DeliveryAddedToRouteConsumer>(DeliveryAddedToRouteQueue);
         services.AddConsumer<DeliveryCompleted, DeliveryCompletedConsumer>(DeliveryCompletedQueue);
         services.AddConsumer<DeliveryFailed, DeliveryFailedConsumer>(DeliveryFailedQueue);
+        services.AddConsumer<ContractActivated, ContractActivatedConsumer>(ContractActivatedQueue);
+        services.AddConsumer<MealPlanCompositionChanged, MealPlanCompositionChangedConsumer>(MealPlanCompositionChangedQueue);
+
+        services.AddScoped<OutboxPublisher>();
+        services.AddHostedService<OutboxDispatcher>();
 
         return services;
     }
