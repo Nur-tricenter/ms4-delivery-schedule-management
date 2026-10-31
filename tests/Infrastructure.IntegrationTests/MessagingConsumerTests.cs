@@ -324,4 +324,22 @@ public class MessagingConsumerTests : RepositoryTestBase
 
         (await StatusOfAsync(dayId)).ShouldBe(Domain.Enums.DayStatus.Cancelled);
     }
+
+    [Test]
+    public async Task DeliveryRouteLinks_ShouldReturnTheLatestLinkOfTheDay_OrNullWhenNotRouted()
+    {
+        var dayId = await SaveReadyDayAsync();
+
+        await using (var empty = IntegrationTestSetup.CreateContext())
+            (await new DeliveryRouteLinks(empty).FindLatestForDayAsync(dayId, CancellationToken.None)).ShouldBeNull();
+
+        var deliveryId = Guid.NewGuid();
+        await LinkAsync(deliveryId, dayId.ToString());
+
+        await using var context = IntegrationTestSetup.CreateContext();
+        var link = await new DeliveryRouteLinks(context).FindLatestForDayAsync(dayId, CancellationToken.None);
+        link.ShouldNotBeNull();
+        link.DeliveryId.ShouldBe(deliveryId);
+        link.DayId.ShouldBe(dayId);
+    }
 }

@@ -15,6 +15,10 @@ public class CalendarRepository(ApplicationDbContext context) : ICalendarReposit
     public Task<DeliveryCalendar?> GetByDeliveryDayIdAsync(int dayId, CancellationToken cancellationToken) =>
         context.Calendars.Include(c => c.Days).FirstOrDefaultAsync(c => c.Days.Any(d => d.Id == dayId), cancellationToken);
 
+    public Task<List<DeliveryCalendar>> GetByPatientIdAsync(Guid patientId, CancellationToken cancellationToken) =>
+        context.Calendars.Include(c => c.Days).Where(c => c.PatientId == patientId)
+            .OrderByDescending(c => c.Id).ToListAsync(cancellationToken);
+
     public Task<List<DeliveryCalendar>> GetActiveForDeliveryDateAsync(DateOnly date, CancellationToken cancellationToken) =>
         context.Calendars.Include(c => c.Days).Where(c => c.Days.Any(d => d.Date.Value == date)).ToListAsync(cancellationToken);
 

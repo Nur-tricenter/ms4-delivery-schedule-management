@@ -21,6 +21,11 @@ All docs and code in this repository must be written in English.
 | 5 | `/api/v1/calendars/{id}/cancel-day` | POST | Frontend (patient) | dayId | dayId, status=CANCELLED |
 | 6 | `/api/v1/calendars/{id}` | GET | Frontend / internal | calendarId | full calendar with days |
 | 7 | `/api/v1/calendars/days/{dayId}/delivery-result` | PATCH | MS5 | dayId, result(DELIVERED\|FAILED), evidence | dayId, status |
+| 8 | `/api/v1/calendars/by-contract/{contractId}` | GET | Frontend / demo console | contractId | full calendar with days (404 if none) |
+| 9 | `/api/v1/calendars/by-patient/{patientId}` | GET | Frontend / demo console | patientId | calendars of the patient, newest first (may be empty) |
+| 10 | `/api/v1/calendars/days/{dayId}/delivery-link` | GET | Frontend / demo console | dayId | dayId, calendarId, date, dayStatus, MS5 deliveryId/routeId/linkedAt (null until routed) |
+
+Endpoints 8–10 are read-only lookups added for cross-service gap X-17 (following a contract to its calendar and a day to its MS5 delivery without reading the databases). They reuse scope `deliveryCalendar.calendar:read`.
 
 Note: endpoint #2 serves a dual purpose per the original requirements table — an auxiliary MS3 query **and** the mechanism by which MS3 generates the daily production order (replaces the async `ProductionOrderRequired` event documented in the architecture phase). MS4 must have tomorrow's day already resolved (recipe/portions via MS2) **before** this call arrives — never resolve on-demand inside the request.
 

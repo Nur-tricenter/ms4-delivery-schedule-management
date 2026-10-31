@@ -139,6 +139,15 @@ All flows in this category operate on a `DeliveryDay` inside an already-existing
 - **Content guarantee**: can only return days that were `ReadyForProduction` at the time consolidation ran — never `Pending`/`Scheduled`/`Cancelled` days.
 - **Test coverage**: `GetActiveTomorrowQueryTests`.
 
+### E.3 — Lookups for following a case end to end (gap X-17)
+
+All three need `deliveryCalendar.calendar:read`, like E.1.
+
+- **Calendar by contract** (`GetCalendarByContractQuery`, `GET /api/v1/calendars/by-contract/{contractId}`): the calendar MS3's contract produced, or **404** if it does not exist yet. At most one per contract (A.1 is idempotent by `contractId`).
+- **Calendars by patient** (`GetCalendarsByPatientQuery`, `GET /api/v1/calendars/by-patient/{patientId}`): every calendar of the patient, newest first; an unknown patient is an **empty list**.
+- **Delivery link of a day** (`GetDayDeliveryLinkQuery`, `GET /api/v1/calendars/days/{dayId}/delivery-link`): the day's status plus the MS5 `deliveryId`/`routeId` recorded from `delivery-added-to-route` (`DeliveryRouteLinks`, latest link wins). Delivery fields are `null` until MS5 routes the package; **404** only if the day does not exist. Eventually consistent: poll it.
+- **Test coverage**: `CalendarLookupQueryTests`, `CalendarsEndpointsTests` (lookups + 401/403), `CalendarRepositoryTests.GetByPatientIdAsync_*`, `MessagingConsumerTests.DeliveryRouteLinks_*`.
+
 ---
 
 ## Global rules (apply across multiple flows)

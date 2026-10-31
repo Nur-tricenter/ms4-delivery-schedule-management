@@ -169,4 +169,36 @@ public class CalendarRepositoryTests : RepositoryTestBase
         results.ShouldHaveSingleItem();
         results[0].Id.ShouldBe(calendar.Id);
     }
+
+    [Test]
+    public async Task GetByPatientIdAsync_ShouldReturnOnlyThatPatientsCalendars_NewestFirst()
+    {
+        var patientId = Guid.NewGuid();
+        DeliveryCalendar NewCalendar(Guid patient) => DeliveryCalendar.Create(
+            patient,
+            new ContractReference(Guid.NewGuid()),
+            new PlanReference(Guid.NewGuid()),
+            new PlanDuration(15),
+            new DeliveryDate(new DateOnly(2026, 8, 1)));
+
+        var older = NewCalendar(patientId);
+        var other = NewCalendar(Guid.NewGuid());
+        var newer = NewCalendar(patientId);
+
+        await using (var context = IntegrationTestSetup.CreateContext())
+        {
+            var repository = new CalendarRepository(context);
+            repository.Add(older);
+            await context.SaveChangesAsync(CancellationToken.None);
+            repository.Add(other);
+            repository.Add(newer);
+            await context.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using var readContext = IntegrationTestSetup.CreateContext();
+        var found = await new CalendarRepository(readContext).GetByPatientIdAsync(patientId, CancellationToken.None);
+
+        found.Select(c => c.Id).ShouldBe([newer.Id, older.Id]);
+        found.ShouldAllBe(c => c.Days.Count == 15);
+    }
 }

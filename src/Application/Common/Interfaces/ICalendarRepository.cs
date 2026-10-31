@@ -10,6 +10,8 @@ public interface ICalendarRepository
 
     Task<DeliveryCalendar?> GetByDeliveryDayIdAsync(int dayId, CancellationToken cancellationToken);
 
+    Task<List<DeliveryCalendar>> GetByPatientIdAsync(Guid patientId, CancellationToken cancellationToken);
+
     Task<List<DeliveryCalendar>> GetActiveForDeliveryDateAsync(DateOnly date, CancellationToken cancellationToken);
 
     void Add(DeliveryCalendar calendar);
