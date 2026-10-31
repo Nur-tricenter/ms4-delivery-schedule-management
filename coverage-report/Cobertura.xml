@@ -1,0 +1,2286 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE coverage SYSTEM "http://cobertura.sourceforge.net/xml/coverage-04.dtd">
+<coverage line-rate="0.9812080536912752" branch-rate="0.8936170212765957" lines-covered="731" lines-valid="745" branches-covered="126" branches-valid="141" complexity="215" version="0" timestamp="1791646205">
+  <sources>
+    <source>D:/Visual Studio 2022 Projects/delivery-schedule-management/src/</source>
+    <source>D:/Visual Studio 2022 Projects/delivery-schedule-management/src/Domain/</source>
+  </sources>
+  <packages>
+    <package name="delivery_schedule_management.Application" line-rate="0.9959016393442623" branch-rate="0.7962962962962963" complexity="75">
+      <classes>
+        <class name="delivery_schedule_management.Application.Calendars.Commands.ApplyDeliveryResult.ApplyDeliveryResultCommandHandler" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Application\Calendars\Commands\ApplyDeliveryResult\ApplyDeliveryResult.cs" line-rate="1" branch-rate="0.6666666666666666" complexity="6">
+          <methods>
+            <method name="Handle" signature="()" line-rate="1" branch-rate="0.6666666666666666" complexity="6">
+              <lines>
+                <line number="17" hits="4" branch="false" />
+                <line number="18" hits="4" branch="true" condition-coverage="100% (2/2)" />
+                <line number="19" hits="4" branch="false" />
+                <line number="21" hits="3" branch="false" />
+                <line number="23" hits="3" branch="true" condition-coverage="50% (2/4)" />
+                <line number="24" hits="3" branch="false" />
+                <line number="25" hits="3" branch="false" />
+                <line number="27" hits="3" branch="false" />
+                <line number="29" hits="3" branch="false" />
+                <line number="31" hits="3" branch="false" />
+                <line number="32" hits="3" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="17" hits="4" branch="false" />
+            <line number="18" hits="4" branch="true" condition-coverage="100% (2/2)" />
+            <line number="19" hits="4" branch="false" />
+            <line number="21" hits="3" branch="false" />
+            <line number="23" hits="3" branch="true" condition-coverage="50% (2/4)" />
+            <line number="24" hits="3" branch="false" />
+            <line number="25" hits="3" branch="false" />
+            <line number="27" hits="3" branch="false" />
+            <line number="29" hits="3" branch="false" />
+            <line number="31" hits="3" branch="false" />
+            <line number="32" hits="3" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Application.Calendars.Commands.ApplyDeliveryResult.ApplyDeliveryResultCommandValidator" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Application\Calendars\Commands\ApplyDeliveryResult\ApplyDeliveryResultCommandValidator.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="5" hits="1" branch="false" />
+                <line number="6" hits="1" branch="false" />
+                <line number="7" hits="1" branch="false" />
+                <line number="8" hits="1" branch="false" />
+                <line number="9" hits="1" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="5" hits="1" branch="false" />
+            <line number="6" hits="1" branch="false" />
+            <line number="7" hits="1" branch="false" />
+            <line number="8" hits="1" branch="false" />
+            <line number="9" hits="1" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Application.Calendars.Commands.CancelDeliveryDay.CancelDeliveryDayCommandHandler" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Application\Calendars\Commands\CancelDeliveryDay\CancelDeliveryDay.cs" line-rate="1" branch-rate="0.5" complexity="4">
+          <methods>
+            <method name="Handle" signature="()" line-rate="1" branch-rate="0.5" complexity="4">
+              <lines>
+                <line number="15" hits="2" branch="false" />
+                <line number="16" hits="2" branch="true" condition-coverage="50% (1/2)" />
+                <line number="17" hits="2" branch="false" />
+                <line number="19" hits="2" branch="true" condition-coverage="50% (1/2)" />
+                <line number="20" hits="2" branch="false" />
+                <line number="22" hits="2" branch="false" />
+                <line number="24" hits="1" branch="false" />
+                <line number="26" hits="1" branch="false" />
+                <line number="27" hits="1" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="15" hits="2" branch="false" />
+            <line number="16" hits="2" branch="true" condition-coverage="50% (1/2)" />
+            <line number="17" hits="2" branch="false" />
+            <line number="19" hits="2" branch="true" condition-coverage="50% (1/2)" />
+            <line number="20" hits="2" branch="false" />
+            <line number="22" hits="2" branch="false" />
+            <line number="24" hits="1" branch="false" />
+            <line number="26" hits="1" branch="false" />
+            <line number="27" hits="1" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Application.Calendars.Commands.CancelDeliveryDay.CancelDeliveryDayCommandValidator" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Application\Calendars\Commands\CancelDeliveryDay\CancelDeliveryDayCommandValidator.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="5" hits="1" branch="false" />
+                <line number="6" hits="1" branch="false" />
+                <line number="7" hits="1" branch="false" />
+                <line number="8" hits="1" branch="false" />
+                <line number="9" hits="1" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="5" hits="1" branch="false" />
+            <line number="6" hits="1" branch="false" />
+            <line number="7" hits="1" branch="false" />
+            <line number="8" hits="1" branch="false" />
+            <line number="9" hits="1" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Application.Calendars.Commands.CreateSchedule.CreateScheduleCommandHandler" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Application\Calendars\Commands\CreateSchedule\CreateSchedule.cs" line-rate="1" branch-rate="1" complexity="3">
+          <methods>
+            <method name="ToResult" signature="(delivery_schedule_management.Domain.Entities.DeliveryCalendar)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="41" hits="14" branch="false" />
+              </lines>
+            </method>
+            <method name="Handle" signature="()" line-rate="1" branch-rate="1" complexity="2">
+              <lines>
+                <line number="17" hits="14" branch="false" />
+                <line number="20" hits="14" branch="false" />
+                <line number="21" hits="14" branch="true" condition-coverage="100% (2/2)" />
+                <line number="22" hits="1" branch="false" />
+                <line number="23" hits="1" branch="false" />
+                <line number="26" hits="13" branch="false" />
+                <line number="27" hits="13" branch="false" />
+                <line number="28" hits="13" branch="false" />
+                <line number="29" hits="13" branch="false" />
+                <line number="30" hits="13" branch="false" />
+                <line number="31" hits="13" branch="false" />
+                <line number="33" hits="13" branch="false" />
+                <line number="35" hits="13" branch="false" />
+                <line number="37" hits="13" branch="false" />
+                <line number="38" hits="14" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="17" hits="14" branch="false" />
+            <line number="20" hits="14" branch="false" />
+            <line number="21" hits="14" branch="true" condition-coverage="100% (2/2)" />
+            <line number="22" hits="1" branch="false" />
+            <line number="23" hits="1" branch="false" />
+            <line number="26" hits="13" branch="false" />
+            <line number="27" hits="13" branch="false" />
+            <line number="28" hits="13" branch="false" />
+            <line number="29" hits="13" branch="false" />
+            <line number="30" hits="13" branch="false" />
+            <line number="31" hits="13" branch="false" />
+            <line number="33" hits="13" branch="false" />
+            <line number="35" hits="13" branch="false" />
+            <line number="37" hits="13" branch="false" />
+            <line number="38" hits="14" branch="false" />
+            <line number="41" hits="14" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Application.Calendars.Commands.CreateSchedule.CreateScheduleCommandValidator" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Application\Calendars\Commands\CreateSchedule\CreateScheduleCommandValidator.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="5" hits="2" branch="false" />
+                <line number="6" hits="2" branch="false" />
+                <line number="7" hits="2" branch="false" />
+                <line number="8" hits="2" branch="false" />
+                <line number="9" hits="2" branch="false" />
+                <line number="10" hits="2" branch="false" />
+                <line number="11" hits="2" branch="false" />
+                <line number="12" hits="2" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="5" hits="2" branch="false" />
+            <line number="6" hits="2" branch="false" />
+            <line number="7" hits="2" branch="false" />
+            <line number="8" hits="2" branch="false" />
+            <line number="9" hits="2" branch="false" />
+            <line number="10" hits="2" branch="false" />
+            <line number="11" hits="2" branch="false" />
+            <line number="12" hits="2" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Application.Calendars.Commands.RescheduleDeliveryDay.RescheduleDeliveryDayCommandHandler" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Application\Calendars\Commands\RescheduleDeliveryDay\RescheduleDeliveryDay.cs" line-rate="0.9090909090909091" branch-rate="0.6666666666666666" complexity="6">
+          <methods>
+            <method name="Handle" signature="()" line-rate="0.9090909090909091" branch-rate="0.6666666666666666" complexity="6">
+              <lines>
+                <line number="18" hits="3" branch="false" />
+                <line number="19" hits="3" branch="true" condition-coverage="100% (2/2)" />
+                <line number="20" hits="3" branch="false" />
+                <line number="22" hits="2" branch="true" condition-coverage="50% (1/2)" />
+                <line number="23" hits="2" branch="false" />
+                <line number="25" hits="2" branch="true" condition-coverage="50% (1/2)" />
+                <line number="26" hits="0" branch="false" />
+                <line number="28" hits="2" branch="false" />
+                <line number="30" hits="1" branch="false" />
+                <line number="32" hits="1" branch="false" />
+                <line number="33" hits="1" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="18" hits="3" branch="false" />
+            <line number="19" hits="3" branch="true" condition-coverage="100% (2/2)" />
+            <line number="20" hits="3" branch="false" />
+            <line number="22" hits="2" branch="true" condition-coverage="50% (1/2)" />
+            <line number="23" hits="2" branch="false" />
+            <line number="25" hits="2" branch="true" condition-coverage="50% (1/2)" />
+            <line number="26" hits="0" branch="false" />
+            <line number="28" hits="2" branch="false" />
+            <line number="30" hits="1" branch="false" />
+            <line number="32" hits="1" branch="false" />
+            <line number="33" hits="1" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Application.Calendars.Commands.RescheduleDeliveryDay.RescheduleDeliveryDayCommandValidator" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Application\Calendars\Commands\RescheduleDeliveryDay\RescheduleDeliveryDayCommandValidator.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="5" hits="1" branch="false" />
+                <line number="6" hits="1" branch="false" />
+                <line number="7" hits="1" branch="false" />
+                <line number="8" hits="1" branch="false" />
+                <line number="9" hits="1" branch="false" />
+                <line number="10" hits="1" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="5" hits="1" branch="false" />
+            <line number="6" hits="1" branch="false" />
+            <line number="7" hits="1" branch="false" />
+            <line number="8" hits="1" branch="false" />
+            <line number="9" hits="1" branch="false" />
+            <line number="10" hits="1" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Application.Calendars.Commands.ResolveDailyCatalog.ResolveDailyCatalogCommandHandler" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Application\Calendars\Commands\ResolveDailyCatalog\ResolveDailyCatalog.cs" line-rate="1" branch-rate="1" complexity="10">
+          <methods>
+            <method name="Handle" signature="()" line-rate="1" branch-rate="1" complexity="10">
+              <lines>
+                <line number="25" hits="8" branch="false" />
+                <line number="26" hits="8" branch="true" condition-coverage="100% (2/2)" />
+                <line number="27" hits="8" branch="false" />
+                <line number="29" hits="8" branch="false" />
+                <line number="31" hits="35" branch="true" condition-coverage="100% (2/2)" />
+                <line number="32" hits="6" branch="false" />
+                <line number="33" hits="6" branch="true" condition-coverage="100% (2/2)" />
+                <line number="34" hits="6" branch="true" condition-coverage="100% (2/2)" />
+                <line number="35" hits="1" branch="false" />
+                <line number="36" hits="1" branch="false" />
+                <line number="39" hits="5" branch="false" />
+                <line number="41" hits="4" branch="false" />
+                <line number="42" hits="4" branch="false" />
+                <line number="44" hits="7" branch="false" />
+                <line number="46" hits="7" branch="false" />
+                <line number="48" hits="7" branch="true" condition-coverage="100% (2/2)" />
+                <line number="49" hits="6" branch="false" />
+                <line number="50" hits="6" branch="false" />
+                <line number="51" hits="6" branch="false" />
+                <line number="53" hits="7" branch="false" />
+                <line number="54" hits="7" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="25" hits="8" branch="false" />
+            <line number="26" hits="8" branch="true" condition-coverage="100% (2/2)" />
+            <line number="27" hits="8" branch="false" />
+            <line number="29" hits="8" branch="false" />
+            <line number="31" hits="35" branch="true" condition-coverage="100% (2/2)" />
+            <line number="32" hits="6" branch="false" />
+            <line number="33" hits="6" branch="true" condition-coverage="100% (2/2)" />
+            <line number="34" hits="6" branch="true" condition-coverage="100% (2/2)" />
+            <line number="35" hits="1" branch="false" />
+            <line number="36" hits="1" branch="false" />
+            <line number="39" hits="5" branch="false" />
+            <line number="41" hits="4" branch="false" />
+            <line number="42" hits="4" branch="false" />
+            <line number="44" hits="7" branch="false" />
+            <line number="46" hits="7" branch="false" />
+            <line number="48" hits="7" branch="true" condition-coverage="100% (2/2)" />
+            <line number="49" hits="6" branch="false" />
+            <line number="50" hits="6" branch="false" />
+            <line number="51" hits="6" branch="false" />
+            <line number="53" hits="7" branch="false" />
+            <line number="54" hits="7" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Application.Calendars.Commands.SetDeliveryAddress.SetDeliveryAddressCommandHandler" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Application\Calendars\Commands\SetDeliveryAddress\SetDeliveryAddress.cs" line-rate="1" branch-rate="0.5" complexity="4">
+          <methods>
+            <method name="Handle" signature="()" line-rate="1" branch-rate="0.5" complexity="4">
+              <lines>
+                <line number="24" hits="6" branch="false" />
+                <line number="25" hits="6" branch="true" condition-coverage="50% (1/2)" />
+                <line number="26" hits="6" branch="false" />
+                <line number="28" hits="6" branch="true" condition-coverage="50% (1/2)" />
+                <line number="29" hits="6" branch="false" />
+                <line number="31" hits="6" branch="false" />
+                <line number="32" hits="6" branch="false" />
+                <line number="33" hits="6" branch="false" />
+                <line number="34" hits="6" branch="false" />
+                <line number="35" hits="6" branch="false" />
+                <line number="36" hits="6" branch="false" />
+                <line number="38" hits="6" branch="false" />
+                <line number="40" hits="6" branch="false" />
+                <line number="42" hits="6" branch="false" />
+                <line number="43" hits="6" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="24" hits="6" branch="false" />
+            <line number="25" hits="6" branch="true" condition-coverage="50% (1/2)" />
+            <line number="26" hits="6" branch="false" />
+            <line number="28" hits="6" branch="true" condition-coverage="50% (1/2)" />
+            <line number="29" hits="6" branch="false" />
+            <line number="31" hits="6" branch="false" />
+            <line number="32" hits="6" branch="false" />
+            <line number="33" hits="6" branch="false" />
+            <line number="34" hits="6" branch="false" />
+            <line number="35" hits="6" branch="false" />
+            <line number="36" hits="6" branch="false" />
+            <line number="38" hits="6" branch="false" />
+            <line number="40" hits="6" branch="false" />
+            <line number="42" hits="6" branch="false" />
+            <line number="43" hits="6" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Application.Calendars.Commands.SetDeliveryAddress.SetDeliveryAddressCommandValidator" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Application\Calendars\Commands\SetDeliveryAddress\SetDeliveryAddressCommandValidator.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="5" hits="1" branch="false" />
+                <line number="6" hits="1" branch="false" />
+                <line number="7" hits="1" branch="false" />
+                <line number="8" hits="1" branch="false" />
+                <line number="9" hits="1" branch="false" />
+                <line number="10" hits="1" branch="false" />
+                <line number="11" hits="1" branch="false" />
+                <line number="12" hits="1" branch="false" />
+                <line number="13" hits="1" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="5" hits="1" branch="false" />
+            <line number="6" hits="1" branch="false" />
+            <line number="7" hits="1" branch="false" />
+            <line number="8" hits="1" branch="false" />
+            <line number="9" hits="1" branch="false" />
+            <line number="10" hits="1" branch="false" />
+            <line number="11" hits="1" branch="false" />
+            <line number="12" hits="1" branch="false" />
+            <line number="13" hits="1" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Application.Calendars.Common.CalendarMappings" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Application\Calendars\Common\CalendarMappings.cs" line-rate="1" branch-rate="0.5" complexity="8">
+          <methods>
+            <method name="ToDto" signature="(delivery_schedule_management.Domain.ValueObjects.DeliveryAddress)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="9" hits="6" branch="false" />
+              </lines>
+            </method>
+            <method name="ToDto" signature="(delivery_schedule_management.Domain.Entities.DeliveryDay)" line-rate="1" branch-rate="0.5" complexity="6">
+              <lines>
+                <line number="12" hits="225" branch="true" condition-coverage="50% (3/6)" />
+                <line number="13" hits="225" branch="false" />
+                <line number="14" hits="225" branch="false" />
+                <line number="15" hits="225" branch="false" />
+                <line number="16" hits="225" branch="false" />
+                <line number="17" hits="225" branch="false" />
+                <line number="18" hits="225" branch="false" />
+                <line number="19" hits="225" branch="false" />
+              </lines>
+            </method>
+            <method name="ToVm" signature="(delivery_schedule_management.Domain.Entities.DeliveryCalendar)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="22" hits="1" branch="false" />
+                <line number="23" hits="1" branch="false" />
+                <line number="24" hits="1" branch="false" />
+                <line number="25" hits="1" branch="false" />
+                <line number="26" hits="1" branch="false" />
+                <line number="27" hits="1" branch="false" />
+                <line number="28" hits="1" branch="false" />
+                <line number="29" hits="1" branch="false" />
+                <line number="30" hits="1" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="9" hits="6" branch="false" />
+            <line number="12" hits="225" branch="true" condition-coverage="50% (3/6)" />
+            <line number="13" hits="225" branch="false" />
+            <line number="14" hits="225" branch="false" />
+            <line number="15" hits="225" branch="false" />
+            <line number="16" hits="225" branch="false" />
+            <line number="17" hits="225" branch="false" />
+            <line number="18" hits="225" branch="false" />
+            <line number="19" hits="225" branch="false" />
+            <line number="22" hits="1" branch="false" />
+            <line number="23" hits="1" branch="false" />
+            <line number="24" hits="1" branch="false" />
+            <line number="25" hits="1" branch="false" />
+            <line number="26" hits="1" branch="false" />
+            <line number="27" hits="1" branch="false" />
+            <line number="28" hits="1" branch="false" />
+            <line number="29" hits="1" branch="false" />
+            <line number="30" hits="1" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Application.Calendars.Queries.GetActiveTomorrow.GetActiveTomorrowQueryHandler" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Application\Calendars\Queries\GetActiveTomorrow\GetActiveTomorrowQuery.cs" line-rate="1" branch-rate="1" complexity="4">
+          <methods>
+            <method name="Handle" signature="()" line-rate="1" branch-rate="1" complexity="4">
+              <lines>
+                <line number="13" hits="2" branch="false" />
+                <line number="14" hits="2" branch="true" condition-coverage="100% (2/2)" />
+                <line number="16" hits="2" branch="false" />
+                <line number="18" hits="2" branch="true" condition-coverage="100% (2/2)" />
+                <line number="19" hits="1" branch="false" />
+                <line number="20" hits="1" branch="false" />
+                <line number="23" hits="1" branch="false" />
+                <line number="24" hits="1" branch="false" />
+                <line number="25" hits="1" branch="false" />
+                <line number="26" hits="1" branch="false" />
+                <line number="27" hits="1" branch="false" />
+                <line number="28" hits="1" branch="false" />
+                <line number="29" hits="1" branch="false" />
+                <line number="30" hits="1" branch="false" />
+                <line number="31" hits="1" branch="false" />
+                <line number="32" hits="1" branch="false" />
+                <line number="33" hits="2" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="13" hits="2" branch="false" />
+            <line number="14" hits="2" branch="true" condition-coverage="100% (2/2)" />
+            <line number="16" hits="2" branch="false" />
+            <line number="18" hits="2" branch="true" condition-coverage="100% (2/2)" />
+            <line number="19" hits="1" branch="false" />
+            <line number="20" hits="1" branch="false" />
+            <line number="23" hits="1" branch="false" />
+            <line number="24" hits="1" branch="false" />
+            <line number="25" hits="1" branch="false" />
+            <line number="26" hits="1" branch="false" />
+            <line number="27" hits="1" branch="false" />
+            <line number="28" hits="1" branch="false" />
+            <line number="29" hits="1" branch="false" />
+            <line number="30" hits="1" branch="false" />
+            <line number="31" hits="1" branch="false" />
+            <line number="32" hits="1" branch="false" />
+            <line number="33" hits="2" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Application.Calendars.Queries.GetCalendar.GetCalendarQueryHandler" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Application\Calendars\Queries\GetCalendar\GetCalendarQuery.cs" line-rate="1" branch-rate="1" complexity="2">
+          <methods>
+            <method name="Handle" signature="()" line-rate="1" branch-rate="1" complexity="2">
+              <lines>
+                <line number="12" hits="2" branch="false" />
+                <line number="13" hits="2" branch="true" condition-coverage="100% (2/2)" />
+                <line number="14" hits="2" branch="false" />
+                <line number="16" hits="1" branch="false" />
+                <line number="17" hits="1" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="12" hits="2" branch="false" />
+            <line number="13" hits="2" branch="true" condition-coverage="100% (2/2)" />
+            <line number="14" hits="2" branch="false" />
+            <line number="16" hits="1" branch="false" />
+            <line number="17" hits="1" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Application.Common.Behaviours.LoggingBehaviour`1" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Application\Common\Behaviours\LoggingBehaviour.cs" line-rate="1" branch-rate="1" complexity="2">
+          <methods>
+            <method name="Process" signature="(TRequest,System.Threading.CancellationToken)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="17" hits="1" branch="false" />
+                <line number="18" hits="1" branch="false" />
+                <line number="20" hits="1" branch="false" />
+                <line number="21" hits="1" branch="false" />
+                <line number="23" hits="1" branch="false" />
+                <line number="24" hits="1" branch="false" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="(Microsoft.Extensions.Logging.ILogger`1&lt;TRequest&gt;)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="12" hits="1" branch="false" />
+                <line number="13" hits="1" branch="false" />
+                <line number="14" hits="1" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="12" hits="1" branch="false" />
+            <line number="13" hits="1" branch="false" />
+            <line number="14" hits="1" branch="false" />
+            <line number="17" hits="1" branch="false" />
+            <line number="18" hits="1" branch="false" />
+            <line number="20" hits="1" branch="false" />
+            <line number="21" hits="1" branch="false" />
+            <line number="23" hits="1" branch="false" />
+            <line number="24" hits="1" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Application.Common.Behaviours.PerformanceBehaviour`2" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Application\Common\Behaviours\PerformanceBehaviour.cs" line-rate="1" branch-rate="1" complexity="3">
+          <methods>
+            <method name=".ctor" signature="(Microsoft.Extensions.Logging.ILogger`1&lt;TRequest&gt;)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="13" hits="2" branch="false" />
+                <line number="14" hits="2" branch="false" />
+                <line number="16" hits="2" branch="false" />
+                <line number="17" hits="2" branch="false" />
+              </lines>
+            </method>
+            <method name="Handle" signature="()" line-rate="1" branch-rate="1" complexity="2">
+              <lines>
+                <line number="20" hits="2" branch="false" />
+                <line number="21" hits="2" branch="false" />
+                <line number="23" hits="2" branch="false" />
+                <line number="25" hits="2" branch="false" />
+                <line number="27" hits="2" branch="false" />
+                <line number="29" hits="2" branch="true" condition-coverage="100% (2/2)" />
+                <line number="30" hits="1" branch="false" />
+                <line number="31" hits="1" branch="false" />
+                <line number="33" hits="1" branch="false" />
+                <line number="34" hits="1" branch="false" />
+                <line number="35" hits="1" branch="false" />
+                <line number="37" hits="2" branch="false" />
+                <line number="38" hits="2" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="13" hits="2" branch="false" />
+            <line number="14" hits="2" branch="false" />
+            <line number="16" hits="2" branch="false" />
+            <line number="17" hits="2" branch="false" />
+            <line number="20" hits="2" branch="false" />
+            <line number="21" hits="2" branch="false" />
+            <line number="23" hits="2" branch="false" />
+            <line number="25" hits="2" branch="false" />
+            <line number="27" hits="2" branch="false" />
+            <line number="29" hits="2" branch="true" condition-coverage="100% (2/2)" />
+            <line number="30" hits="1" branch="false" />
+            <line number="31" hits="1" branch="false" />
+            <line number="33" hits="1" branch="false" />
+            <line number="34" hits="1" branch="false" />
+            <line number="35" hits="1" branch="false" />
+            <line number="37" hits="2" branch="false" />
+            <line number="38" hits="2" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Application.Common.Behaviours.UnhandledExceptionBehaviour`2" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Application\Common\Behaviours\UnhandledExceptionBehaviour.cs" line-rate="1" branch-rate="1" complexity="2">
+          <methods>
+            <method name=".ctor" signature="(Microsoft.Extensions.Logging.ILogger`1&lt;TRequest&gt;)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="11" hits="2" branch="false" />
+                <line number="12" hits="2" branch="false" />
+                <line number="13" hits="2" branch="false" />
+              </lines>
+            </method>
+            <method name="Handle" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="16" hits="2" branch="false" />
+                <line number="18" hits="2" branch="false" />
+                <line number="19" hits="2" branch="false" />
+                <line number="21" hits="1" branch="false" />
+                <line number="22" hits="1" branch="false" />
+                <line number="23" hits="1" branch="false" />
+                <line number="25" hits="1" branch="false" />
+                <line number="27" hits="1" branch="false" />
+                <line number="29" hits="1" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="11" hits="2" branch="false" />
+            <line number="12" hits="2" branch="false" />
+            <line number="13" hits="2" branch="false" />
+            <line number="16" hits="2" branch="false" />
+            <line number="18" hits="2" branch="false" />
+            <line number="19" hits="2" branch="false" />
+            <line number="21" hits="1" branch="false" />
+            <line number="22" hits="1" branch="false" />
+            <line number="23" hits="1" branch="false" />
+            <line number="25" hits="1" branch="false" />
+            <line number="27" hits="1" branch="false" />
+            <line number="29" hits="1" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Application.Common.Behaviours.ValidationBehaviour`2" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Application\Common\Behaviours\ValidationBehaviour.cs" line-rate="1" branch-rate="1" complexity="9">
+          <methods>
+            <method name=".ctor" signature="(System.Collections.Generic.IEnumerable`1&lt;FluentValidation.IValidator`1&lt;TRequest&gt;&gt;)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="11" hits="3" branch="false" />
+                <line number="12" hits="3" branch="false" />
+                <line number="13" hits="3" branch="false" />
+              </lines>
+            </method>
+            <method name="Handle" signature="()" line-rate="1" branch-rate="1" complexity="8">
+              <lines>
+                <line number="16" hits="3" branch="false" />
+                <line number="17" hits="3" branch="true" condition-coverage="100% (2/2)" />
+                <line number="18" hits="2" branch="false" />
+                <line number="19" hits="2" branch="false" />
+                <line number="20" hits="2" branch="false" />
+                <line number="21" hits="2" branch="false" />
+                <line number="23" hits="2" branch="true" condition-coverage="100% (4/4)" />
+                <line number="24" hits="2" branch="false" />
+                <line number="25" hits="2" branch="false" />
+                <line number="26" hits="2" branch="false" />
+                <line number="28" hits="2" branch="true" condition-coverage="100% (2/2)" />
+                <line number="29" hits="1" branch="false" />
+                <line number="30" hits="1" branch="false" />
+                <line number="32" hits="2" branch="false" />
+                <line number="33" hits="2" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="11" hits="3" branch="false" />
+            <line number="12" hits="3" branch="false" />
+            <line number="13" hits="3" branch="false" />
+            <line number="16" hits="3" branch="false" />
+            <line number="17" hits="3" branch="true" condition-coverage="100% (2/2)" />
+            <line number="18" hits="2" branch="false" />
+            <line number="19" hits="2" branch="false" />
+            <line number="20" hits="2" branch="false" />
+            <line number="21" hits="2" branch="false" />
+            <line number="23" hits="2" branch="true" condition-coverage="100% (4/4)" />
+            <line number="24" hits="2" branch="false" />
+            <line number="25" hits="2" branch="false" />
+            <line number="26" hits="2" branch="false" />
+            <line number="28" hits="2" branch="true" condition-coverage="100% (2/2)" />
+            <line number="29" hits="1" branch="false" />
+            <line number="30" hits="1" branch="false" />
+            <line number="32" hits="2" branch="false" />
+            <line number="33" hits="2" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Application.Common.Exceptions.ForbiddenAccessException" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Application\Common\Exceptions\ForbiddenAccessException.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="5" hits="9" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="5" hits="9" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Application.Common.Exceptions.ValidationException" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Application\Common\Exceptions\ValidationException.cs" line-rate="1" branch-rate="1" complexity="2">
+          <methods>
+            <method name=".ctor" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="8" hits="4" branch="false" />
+                <line number="9" hits="4" branch="false" />
+                <line number="11" hits="4" branch="false" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="(System.Collections.Generic.IEnumerable`1&lt;FluentValidation.Results.ValidationFailure&gt;)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="14" hits="3" branch="false" />
+                <line number="15" hits="3" branch="false" />
+                <line number="16" hits="3" branch="false" />
+                <line number="17" hits="3" branch="false" />
+                <line number="18" hits="3" branch="false" />
+                <line number="19" hits="3" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="8" hits="4" branch="false" />
+            <line number="9" hits="4" branch="false" />
+            <line number="11" hits="4" branch="false" />
+            <line number="14" hits="3" branch="false" />
+            <line number="15" hits="3" branch="false" />
+            <line number="16" hits="3" branch="false" />
+            <line number="17" hits="3" branch="false" />
+            <line number="18" hits="3" branch="false" />
+            <line number="19" hits="3" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Application.Common.Models.Result" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Application\Common\Models\Result.cs" line-rate="1" branch-rate="1" complexity="3">
+          <methods>
+            <method name="Success" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="16" hits="2" branch="false" />
+                <line number="17" hits="2" branch="false" />
+                <line number="18" hits="2" branch="false" />
+              </lines>
+            </method>
+            <method name="Failure" signature="(System.Collections.Generic.IEnumerable`1&lt;System.String&gt;)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="21" hits="3" branch="false" />
+                <line number="22" hits="3" branch="false" />
+                <line number="23" hits="3" branch="false" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="(System.Boolean,System.Collections.Generic.IEnumerable`1&lt;System.String&gt;)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="6" hits="5" branch="false" />
+                <line number="7" hits="5" branch="false" />
+                <line number="8" hits="5" branch="false" />
+                <line number="9" hits="5" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="6" hits="5" branch="false" />
+            <line number="7" hits="5" branch="false" />
+            <line number="8" hits="5" branch="false" />
+            <line number="9" hits="5" branch="false" />
+            <line number="16" hits="2" branch="false" />
+            <line number="17" hits="2" branch="false" />
+            <line number="18" hits="2" branch="false" />
+            <line number="21" hits="3" branch="false" />
+            <line number="22" hits="3" branch="false" />
+            <line number="23" hits="3" branch="false" />
+          </lines>
+        </class>
+        <class name="Microsoft.Extensions.DependencyInjection.DependencyInjection" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Application\DependencyInjection.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name="AddApplicationServices" signature="(Microsoft.Extensions.Hosting.IHostApplicationBuilder)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="10" hits="1" branch="false" />
+                <line number="11" hits="1" branch="false" />
+                <line number="12" hits="1" branch="false" />
+                <line number="14" hits="1" branch="false" />
+                <line number="16" hits="1" branch="false" />
+                <line number="17" hits="1" branch="false" />
+                <line number="18" hits="1" branch="false" />
+                <line number="19" hits="1" branch="false" />
+                <line number="20" hits="1" branch="false" />
+                <line number="21" hits="1" branch="false" />
+                <line number="22" hits="1" branch="false" />
+                <line number="23" hits="1" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="10" hits="1" branch="false" />
+            <line number="11" hits="1" branch="false" />
+            <line number="12" hits="1" branch="false" />
+            <line number="14" hits="1" branch="false" />
+            <line number="16" hits="1" branch="false" />
+            <line number="17" hits="1" branch="false" />
+            <line number="18" hits="1" branch="false" />
+            <line number="19" hits="1" branch="false" />
+            <line number="20" hits="1" branch="false" />
+            <line number="21" hits="1" branch="false" />
+            <line number="22" hits="1" branch="false" />
+            <line number="23" hits="1" branch="false" />
+          </lines>
+        </class>
+      </classes>
+    </package>
+    <package name="delivery_schedule_management.Domain" line-rate="0.9949748743718593" branch-rate="0.9682539682539683" complexity="88">
+      <classes>
+        <class name="delivery_schedule_management.Domain.Common.BaseEntity" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Domain\Common\BaseEntity.cs" line-rate="1" branch-rate="1" complexity="5">
+          <methods>
+            <method name="get_DomainEvents" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="14" hits="70" branch="false" />
+              </lines>
+            </method>
+            <method name="AddDomainEvent" signature="(delivery_schedule_management.Domain.Common.BaseEvent)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="17" hits="4" branch="false" />
+                <line number="18" hits="4" branch="false" />
+                <line number="19" hits="4" branch="false" />
+              </lines>
+            </method>
+            <method name="RemoveDomainEvent" signature="(delivery_schedule_management.Domain.Common.BaseEvent)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="22" hits="1" branch="false" />
+                <line number="23" hits="1" branch="false" />
+                <line number="24" hits="1" branch="false" />
+              </lines>
+            </method>
+            <method name="ClearDomainEvents" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="27" hits="3" branch="false" />
+                <line number="28" hits="3" branch="false" />
+                <line number="29" hits="3" branch="false" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="11" hits="811" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="11" hits="811" branch="false" />
+            <line number="14" hits="70" branch="false" />
+            <line number="17" hits="4" branch="false" />
+            <line number="18" hits="4" branch="false" />
+            <line number="19" hits="4" branch="false" />
+            <line number="22" hits="1" branch="false" />
+            <line number="23" hits="1" branch="false" />
+            <line number="24" hits="1" branch="false" />
+            <line number="27" hits="3" branch="false" />
+            <line number="28" hits="3" branch="false" />
+            <line number="29" hits="3" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Domain.Common.ValueObject" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Domain\Common\ValueObject.cs" line-rate="1" branch-rate="1" complexity="13">
+          <methods>
+            <method name="EqualOperator" signature="(delivery_schedule_management.Domain.Common.ValueObject,delivery_schedule_management.Domain.Common.ValueObject)" line-rate="1" branch-rate="1" complexity="4">
+              <lines>
+                <line number="7" hits="5" branch="false" />
+                <line number="8" hits="5" branch="true" condition-coverage="100% (2/2)" />
+                <line number="9" hits="2" branch="false" />
+                <line number="10" hits="2" branch="false" />
+                <line number="13" hits="3" branch="true" condition-coverage="100% (2/2)" />
+                <line number="14" hits="5" branch="false" />
+              </lines>
+            </method>
+            <method name="NotEqualOperator" signature="(delivery_schedule_management.Domain.Common.ValueObject,delivery_schedule_management.Domain.Common.ValueObject)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="17" hits="2" branch="false" />
+                <line number="18" hits="2" branch="false" />
+                <line number="19" hits="2" branch="false" />
+              </lines>
+            </method>
+            <method name="Equals" signature="(System.Object)" line-rate="1" branch-rate="1" complexity="4">
+              <lines>
+                <line number="24" hits="6" branch="false" />
+                <line number="25" hits="6" branch="true" condition-coverage="100% (4/4)" />
+                <line number="26" hits="2" branch="false" />
+                <line number="27" hits="2" branch="false" />
+                <line number="30" hits="4" branch="false" />
+                <line number="31" hits="4" branch="false" />
+                <line number="32" hits="6" branch="false" />
+              </lines>
+            </method>
+            <method name="GetHashCode" signature="()" line-rate="1" branch-rate="1" complexity="2">
+              <lines>
+                <line number="35" hits="2" branch="false" />
+                <line number="36" hits="2" branch="false" />
+                <line number="38" hits="14" branch="true" condition-coverage="100% (2/2)" />
+                <line number="39" hits="4" branch="false" />
+                <line number="40" hits="4" branch="false" />
+                <line number="41" hits="4" branch="false" />
+                <line number="43" hits="2" branch="false" />
+                <line number="44" hits="2" branch="false" />
+              </lines>
+            </method>
+            <method name="op_Equality" signature="(delivery_schedule_management.Domain.Common.ValueObject,delivery_schedule_management.Domain.Common.ValueObject)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="47" hits="3" branch="false" />
+                <line number="48" hits="3" branch="false" />
+                <line number="49" hits="3" branch="false" />
+              </lines>
+            </method>
+            <method name="op_Inequality" signature="(delivery_schedule_management.Domain.Common.ValueObject,delivery_schedule_management.Domain.Common.ValueObject)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="52" hits="2" branch="false" />
+                <line number="53" hits="2" branch="false" />
+                <line number="54" hits="2" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="7" hits="5" branch="false" />
+            <line number="8" hits="5" branch="true" condition-coverage="100% (2/2)" />
+            <line number="9" hits="2" branch="false" />
+            <line number="10" hits="2" branch="false" />
+            <line number="13" hits="3" branch="true" condition-coverage="100% (2/2)" />
+            <line number="14" hits="5" branch="false" />
+            <line number="17" hits="2" branch="false" />
+            <line number="18" hits="2" branch="false" />
+            <line number="19" hits="2" branch="false" />
+            <line number="24" hits="6" branch="false" />
+            <line number="25" hits="6" branch="true" condition-coverage="100% (4/4)" />
+            <line number="26" hits="2" branch="false" />
+            <line number="27" hits="2" branch="false" />
+            <line number="30" hits="4" branch="false" />
+            <line number="31" hits="4" branch="false" />
+            <line number="32" hits="6" branch="false" />
+            <line number="35" hits="2" branch="false" />
+            <line number="36" hits="2" branch="false" />
+            <line number="38" hits="14" branch="true" condition-coverage="100% (2/2)" />
+            <line number="39" hits="4" branch="false" />
+            <line number="40" hits="4" branch="false" />
+            <line number="41" hits="4" branch="false" />
+            <line number="43" hits="2" branch="false" />
+            <line number="44" hits="2" branch="false" />
+            <line number="47" hits="3" branch="false" />
+            <line number="48" hits="3" branch="false" />
+            <line number="49" hits="3" branch="false" />
+            <line number="52" hits="2" branch="false" />
+            <line number="53" hits="2" branch="false" />
+            <line number="54" hits="2" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Domain.Entities.DeliveryCalendar" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Domain\Entities\DeliveryCalendar.cs" line-rate="1" branch-rate="1" complexity="5">
+          <methods>
+            <method name="get_Days" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="23" hits="114" branch="false" />
+              </lines>
+            </method>
+            <method name="Create" signature="(System.Guid,delivery_schedule_management.Domain.ValueObjects.ContractReference,delivery_schedule_management.Domain.ValueObjects.PlanReference,delivery_schedule_management.Domain.ValueObjects.PlanDuration,delivery_schedule_management.Domain.ValueObjects.DeliveryDate)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="43" hits="44" branch="false" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="9" hits="45" branch="false" />
+                <line number="23" hits="114" branch="false" />
+                <line number="25" hits="3" branch="false" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="(System.Guid,delivery_schedule_management.Domain.ValueObjects.ContractReference,delivery_schedule_management.Domain.ValueObjects.PlanReference,delivery_schedule_management.Domain.ValueObjects.PlanDuration,delivery_schedule_management.Domain.ValueObjects.DeliveryDate)" line-rate="1" branch-rate="1" complexity="2">
+              <lines>
+                <line number="27" hits="44" branch="false" />
+                <line number="28" hits="44" branch="false" />
+                <line number="29" hits="44" branch="false" />
+                <line number="30" hits="44" branch="false" />
+                <line number="31" hits="44" branch="false" />
+                <line number="32" hits="44" branch="false" />
+                <line number="33" hits="44" branch="false" />
+                <line number="34" hits="44" branch="false" />
+                <line number="36" hits="1528" branch="true" condition-coverage="100% (2/2)" />
+                <line number="37" hits="720" branch="false" />
+                <line number="38" hits="720" branch="false" />
+                <line number="39" hits="720" branch="false" />
+                <line number="40" hits="44" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="9" hits="45" branch="false" />
+            <line number="23" hits="114" branch="false" />
+            <line number="25" hits="3" branch="false" />
+            <line number="27" hits="44" branch="false" />
+            <line number="28" hits="44" branch="false" />
+            <line number="29" hits="44" branch="false" />
+            <line number="30" hits="44" branch="false" />
+            <line number="31" hits="44" branch="false" />
+            <line number="32" hits="44" branch="false" />
+            <line number="33" hits="44" branch="false" />
+            <line number="34" hits="44" branch="false" />
+            <line number="36" hits="1528" branch="true" condition-coverage="100% (2/2)" />
+            <line number="37" hits="720" branch="false" />
+            <line number="38" hits="720" branch="false" />
+            <line number="39" hits="720" branch="false" />
+            <line number="40" hits="44" branch="false" />
+            <line number="43" hits="44" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Domain.Entities.DeliveryDay" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Domain\Entities\DeliveryDay.cs" line-rate="0.9777777777777777" branch-rate="0.9166666666666666" complexity="26">
+          <methods>
+            <method name="SetAddress" signature="(delivery_schedule_management.Domain.ValueObjects.DeliveryAddress)" line-rate="0.8333333333333334" branch-rate="0.5" complexity="4">
+              <lines>
+                <line number="33" hits="29" branch="false" />
+                <line number="34" hits="29" branch="true" condition-coverage="50% (2/4)" />
+                <line number="35" hits="0" branch="false" />
+                <line number="37" hits="29" branch="false" />
+                <line number="38" hits="29" branch="false" />
+                <line number="39" hits="29" branch="false" />
+              </lines>
+            </method>
+            <method name="MarkReadyForProduction" signature="(delivery_schedule_management.Domain.ValueObjects.RecipeReference,delivery_schedule_management.Domain.ValueObjects.PortionQuantity)" line-rate="1" branch-rate="1" complexity="2">
+              <lines>
+                <line number="42" hits="22" branch="false" />
+                <line number="43" hits="22" branch="true" condition-coverage="100% (2/2)" />
+                <line number="44" hits="1" branch="false" />
+                <line number="46" hits="21" branch="false" />
+                <line number="47" hits="21" branch="false" />
+                <line number="48" hits="21" branch="false" />
+                <line number="49" hits="21" branch="false" />
+              </lines>
+            </method>
+            <method name="Reschedule" signature="(delivery_schedule_management.Domain.ValueObjects.DeliveryDate,System.DateTimeOffset)" line-rate="1" branch-rate="1" complexity="4">
+              <lines>
+                <line number="52" hits="5" branch="false" />
+                <line number="53" hits="5" branch="false" />
+                <line number="55" hits="3" branch="true" condition-coverage="100% (4/4)" />
+                <line number="56" hits="1" branch="false" />
+                <line number="58" hits="2" branch="false" />
+                <line number="59" hits="2" branch="false" />
+              </lines>
+            </method>
+            <method name="Cancel" signature="(System.DateTimeOffset)" line-rate="1" branch-rate="1" complexity="4">
+              <lines>
+                <line number="62" hits="8" branch="false" />
+                <line number="63" hits="8" branch="false" />
+                <line number="65" hits="6" branch="true" condition-coverage="100% (4/4)" />
+                <line number="66" hits="1" branch="false" />
+                <line number="68" hits="5" branch="false" />
+                <line number="69" hits="5" branch="false" />
+              </lines>
+            </method>
+            <method name="ApplyDeliveryResult" signature="(delivery_schedule_management.Domain.Enums.DeliveryResult,delivery_schedule_management.Domain.ValueObjects.DeliveryEvidence,System.DateTimeOffset)" line-rate="1" branch-rate="1" complexity="8">
+              <lines>
+                <line number="72" hits="13" branch="false" />
+                <line number="73" hits="13" branch="true" condition-coverage="100% (2/2)" />
+                <line number="75" hits="13" branch="true" condition-coverage="100% (2/2)" />
+                <line number="76" hits="2" branch="false" />
+                <line number="78" hits="11" branch="true" condition-coverage="100% (4/4)" />
+                <line number="79" hits="1" branch="false" />
+                <line number="81" hits="10" branch="false" />
+                <line number="82" hits="10" branch="false" />
+                <line number="83" hits="12" branch="false" />
+              </lines>
+            </method>
+            <method name="EnsureOutsideLockWindow" signature="(System.DateTimeOffset)" line-rate="1" branch-rate="1" complexity="2">
+              <lines>
+                <line number="86" hits="13" branch="false" />
+                <line number="87" hits="13" branch="false" />
+                <line number="89" hits="13" branch="true" condition-coverage="100% (2/2)" />
+                <line number="90" hits="4" branch="false" />
+                <line number="91" hits="9" branch="false" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="24" hits="45" branch="false" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="(delivery_schedule_management.Domain.ValueObjects.DeliveryDate)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="26" hits="720" branch="false" />
+                <line number="27" hits="720" branch="false" />
+                <line number="28" hits="720" branch="false" />
+                <line number="29" hits="720" branch="false" />
+                <line number="30" hits="720" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="24" hits="45" branch="false" />
+            <line number="26" hits="720" branch="false" />
+            <line number="27" hits="720" branch="false" />
+            <line number="28" hits="720" branch="false" />
+            <line number="29" hits="720" branch="false" />
+            <line number="30" hits="720" branch="false" />
+            <line number="33" hits="29" branch="false" />
+            <line number="34" hits="29" branch="true" condition-coverage="50% (2/4)" />
+            <line number="35" hits="0" branch="false" />
+            <line number="37" hits="29" branch="false" />
+            <line number="38" hits="29" branch="false" />
+            <line number="39" hits="29" branch="false" />
+            <line number="42" hits="22" branch="false" />
+            <line number="43" hits="22" branch="true" condition-coverage="100% (2/2)" />
+            <line number="44" hits="1" branch="false" />
+            <line number="46" hits="21" branch="false" />
+            <line number="47" hits="21" branch="false" />
+            <line number="48" hits="21" branch="false" />
+            <line number="49" hits="21" branch="false" />
+            <line number="52" hits="5" branch="false" />
+            <line number="53" hits="5" branch="false" />
+            <line number="55" hits="3" branch="true" condition-coverage="100% (4/4)" />
+            <line number="56" hits="1" branch="false" />
+            <line number="58" hits="2" branch="false" />
+            <line number="59" hits="2" branch="false" />
+            <line number="62" hits="8" branch="false" />
+            <line number="63" hits="8" branch="false" />
+            <line number="65" hits="6" branch="true" condition-coverage="100% (4/4)" />
+            <line number="66" hits="1" branch="false" />
+            <line number="68" hits="5" branch="false" />
+            <line number="69" hits="5" branch="false" />
+            <line number="72" hits="13" branch="false" />
+            <line number="73" hits="13" branch="true" condition-coverage="100% (2/2)" />
+            <line number="75" hits="13" branch="true" condition-coverage="100% (2/2)" />
+            <line number="76" hits="2" branch="false" />
+            <line number="78" hits="11" branch="true" condition-coverage="100% (4/4)" />
+            <line number="79" hits="1" branch="false" />
+            <line number="81" hits="10" branch="false" />
+            <line number="82" hits="10" branch="false" />
+            <line number="83" hits="12" branch="false" />
+            <line number="86" hits="13" branch="false" />
+            <line number="87" hits="13" branch="false" />
+            <line number="89" hits="13" branch="true" condition-coverage="100% (2/2)" />
+            <line number="90" hits="4" branch="false" />
+            <line number="91" hits="9" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Domain.Entities.ProductionOrder" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Domain\Entities\ProductionOrder.cs" line-rate="1" branch-rate="1" complexity="5">
+          <methods>
+            <method name="get_Lines" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="19" hits="9" branch="false" />
+              </lines>
+            </method>
+            <method name="Create" signature="(delivery_schedule_management.Domain.ValueObjects.DeliveryDate,System.Collections.Generic.IEnumerable`1&lt;delivery_schedule_management.Domain.Entities.ProductionOrderLine&gt;,System.DateTimeOffset)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="33" hits="13" branch="false" />
+              </lines>
+            </method>
+            <method name="ReplaceLines" signature="(System.Collections.Generic.IEnumerable`1&lt;delivery_schedule_management.Domain.Entities.ProductionOrderLine&gt;,System.DateTimeOffset)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="36" hits="3" branch="false" />
+                <line number="37" hits="3" branch="false" />
+                <line number="38" hits="3" branch="false" />
+                <line number="39" hits="3" branch="false" />
+                <line number="40" hits="3" branch="false" />
+                <line number="41" hits="3" branch="false" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="9" hits="15" branch="false" />
+                <line number="19" hits="9" branch="false" />
+                <line number="21" hits="6" branch="false" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="(delivery_schedule_management.Domain.ValueObjects.DeliveryDate,System.Collections.Generic.IEnumerable`1&lt;delivery_schedule_management.Domain.Entities.ProductionOrderLine&gt;,System.DateTimeOffset)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="23" hits="13" branch="false" />
+                <line number="24" hits="13" branch="false" />
+                <line number="25" hits="13" branch="false" />
+                <line number="26" hits="13" branch="false" />
+                <line number="27" hits="13" branch="false" />
+                <line number="28" hits="13" branch="false" />
+                <line number="29" hits="13" branch="false" />
+                <line number="30" hits="13" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="9" hits="15" branch="false" />
+            <line number="19" hits="9" branch="false" />
+            <line number="21" hits="6" branch="false" />
+            <line number="23" hits="13" branch="false" />
+            <line number="24" hits="13" branch="false" />
+            <line number="25" hits="13" branch="false" />
+            <line number="26" hits="13" branch="false" />
+            <line number="27" hits="13" branch="false" />
+            <line number="28" hits="13" branch="false" />
+            <line number="29" hits="13" branch="false" />
+            <line number="30" hits="13" branch="false" />
+            <line number="33" hits="13" branch="false" />
+            <line number="36" hits="3" branch="false" />
+            <line number="37" hits="3" branch="false" />
+            <line number="38" hits="3" branch="false" />
+            <line number="39" hits="3" branch="false" />
+            <line number="40" hits="3" branch="false" />
+            <line number="41" hits="3" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Domain.Entities.ProductionOrderLine" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Domain\Entities\ProductionOrderLine.cs" line-rate="1" branch-rate="1" complexity="2">
+          <methods>
+            <method name=".ctor" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="20" hits="3" branch="false" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="(System.Int32,System.Guid,delivery_schedule_management.Domain.ValueObjects.DeliveryAddress,delivery_schedule_management.Domain.ValueObjects.PlanReference,System.Nullable`1&lt;System.TimeOnly&gt;)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="22" hits="13" branch="false" />
+                <line number="23" hits="13" branch="false" />
+                <line number="24" hits="13" branch="false" />
+                <line number="25" hits="13" branch="false" />
+                <line number="26" hits="13" branch="false" />
+                <line number="27" hits="13" branch="false" />
+                <line number="28" hits="13" branch="false" />
+                <line number="29" hits="13" branch="false" />
+                <line number="30" hits="13" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="20" hits="3" branch="false" />
+            <line number="22" hits="13" branch="false" />
+            <line number="23" hits="13" branch="false" />
+            <line number="24" hits="13" branch="false" />
+            <line number="25" hits="13" branch="false" />
+            <line number="26" hits="13" branch="false" />
+            <line number="27" hits="13" branch="false" />
+            <line number="28" hits="13" branch="false" />
+            <line number="29" hits="13" branch="false" />
+            <line number="30" hits="13" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Domain.Exceptions.DeliveryWindowLockedException" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Domain\Exceptions\DeliveryWindowLockedException.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="(System.Int32,System.DateOnly)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="6" hits="5" branch="false" />
+                <line number="7" hits="5" branch="false" />
+                <line number="8" hits="5" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="6" hits="5" branch="false" />
+            <line number="7" hits="5" branch="false" />
+            <line number="8" hits="5" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Domain.Exceptions.InvalidDeliveryDayTransitionException" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Domain\Exceptions\InvalidDeliveryDayTransitionException.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="(System.Int32,delivery_schedule_management.Domain.Enums.DayStatus,System.String)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="8" hits="5" branch="false" />
+                <line number="9" hits="5" branch="false" />
+                <line number="10" hits="5" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="8" hits="5" branch="false" />
+            <line number="9" hits="5" branch="false" />
+            <line number="10" hits="5" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Domain.Services.OrderConsolidationService" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Domain\Services\OrderConsolidationService.cs" line-rate="1" branch-rate="1" complexity="2">
+          <methods>
+            <method name="Consolidate" signature="(System.Collections.Generic.IEnumerable`1&lt;delivery_schedule_management.Domain.Entities.DeliveryCalendar&gt;,delivery_schedule_management.Domain.ValueObjects.DeliveryDate,delivery_schedule_management.Domain.Entities.ProductionOrder,System.DateTimeOffset)" line-rate="1" branch-rate="1" complexity="2">
+              <lines>
+                <line number="21" hits="13" branch="false" />
+                <line number="22" hits="13" branch="false" />
+                <line number="23" hits="13" branch="false" />
+                <line number="24" hits="13" branch="false" />
+                <line number="25" hits="13" branch="false" />
+                <line number="26" hits="13" branch="false" />
+                <line number="27" hits="13" branch="false" />
+                <line number="28" hits="13" branch="false" />
+                <line number="29" hits="13" branch="false" />
+                <line number="30" hits="13" branch="false" />
+                <line number="31" hits="13" branch="false" />
+                <line number="33" hits="13" branch="true" condition-coverage="100% (2/2)" />
+                <line number="34" hits="2" branch="false" />
+                <line number="35" hits="2" branch="false" />
+                <line number="36" hits="2" branch="false" />
+                <line number="39" hits="11" branch="false" />
+                <line number="40" hits="13" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="21" hits="13" branch="false" />
+            <line number="22" hits="13" branch="false" />
+            <line number="23" hits="13" branch="false" />
+            <line number="24" hits="13" branch="false" />
+            <line number="25" hits="13" branch="false" />
+            <line number="26" hits="13" branch="false" />
+            <line number="27" hits="13" branch="false" />
+            <line number="28" hits="13" branch="false" />
+            <line number="29" hits="13" branch="false" />
+            <line number="30" hits="13" branch="false" />
+            <line number="31" hits="13" branch="false" />
+            <line number="33" hits="13" branch="true" condition-coverage="100% (2/2)" />
+            <line number="34" hits="2" branch="false" />
+            <line number="35" hits="2" branch="false" />
+            <line number="36" hits="2" branch="false" />
+            <line number="39" hits="11" branch="false" />
+            <line number="40" hits="13" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Domain.ValueObjects.ContractReference" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Domain\ValueObjects\ContractReference.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="(System.Guid)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="8" hits="48" branch="false" />
+                <line number="9" hits="48" branch="true" condition-coverage="100% (1/1)" />
+                <line number="10" hits="1" branch="false" />
+                <line number="13" hits="47" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="8" hits="48" branch="false" />
+            <line number="9" hits="48" branch="true" condition-coverage="100% (1/1)" />
+            <line number="10" hits="1" branch="false" />
+            <line number="13" hits="47" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Domain.ValueObjects.Coordinates" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Domain\ValueObjects\Coordinates.cs" line-rate="1" branch-rate="1" complexity="11">
+          <methods>
+            <method name=".ctor" signature="(System.Double,System.Double)" line-rate="1" branch-rate="1" complexity="11">
+              <lines>
+                <line number="10" hits="55" branch="false" />
+                <line number="11" hits="55" branch="true" condition-coverage="100% (6/6)" />
+                <line number="12" hits="2" branch="false" />
+                <line number="14" hits="53" branch="true" condition-coverage="100% (5/5)" />
+                <line number="15" hits="2" branch="false" />
+                <line number="19" hits="51" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="10" hits="55" branch="false" />
+            <line number="11" hits="55" branch="true" condition-coverage="100% (6/6)" />
+            <line number="12" hits="2" branch="false" />
+            <line number="14" hits="53" branch="true" condition-coverage="100% (5/5)" />
+            <line number="15" hits="2" branch="false" />
+            <line number="19" hits="51" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Domain.ValueObjects.DeliveryAddress" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Domain\ValueObjects\DeliveryAddress.cs" line-rate="1" branch-rate="1" complexity="5">
+          <methods>
+            <method name=".ctor" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="20" hits="2" branch="false" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="(System.String,System.String,delivery_schedule_management.Domain.ValueObjects.Coordinates,System.String,System.String)" line-rate="1" branch-rate="1" complexity="4">
+              <lines>
+                <line number="23" hits="39" branch="false" />
+                <line number="24" hits="39" branch="true" condition-coverage="100% (2/2)" />
+                <line number="25" hits="3" branch="false" />
+                <line number="27" hits="36" branch="true" condition-coverage="100% (2/2)" />
+                <line number="28" hits="3" branch="false" />
+                <line number="30" hits="33" branch="false" />
+                <line number="31" hits="33" branch="false" />
+                <line number="32" hits="33" branch="false" />
+                <line number="33" hits="33" branch="false" />
+                <line number="34" hits="33" branch="false" />
+                <line number="35" hits="33" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="20" hits="2" branch="false" />
+            <line number="23" hits="39" branch="false" />
+            <line number="24" hits="39" branch="true" condition-coverage="100% (2/2)" />
+            <line number="25" hits="3" branch="false" />
+            <line number="27" hits="36" branch="true" condition-coverage="100% (2/2)" />
+            <line number="28" hits="3" branch="false" />
+            <line number="30" hits="33" branch="false" />
+            <line number="31" hits="33" branch="false" />
+            <line number="32" hits="33" branch="false" />
+            <line number="33" hits="33" branch="false" />
+            <line number="34" hits="33" branch="false" />
+            <line number="35" hits="33" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Domain.ValueObjects.DeliveryDate" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Domain\ValueObjects\DeliveryDate.cs" line-rate="1" branch-rate="1" complexity="2">
+          <methods>
+            <method name="AddDays" signature="(System.Int32)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="15" hits="779" branch="false" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="(System.DateOnly)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="8" hits="865" branch="false" />
+                <line number="9" hits="865" branch="true" condition-coverage="100% (1/1)" />
+                <line number="10" hits="1" branch="false" />
+                <line number="13" hits="864" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="8" hits="865" branch="false" />
+            <line number="9" hits="865" branch="true" condition-coverage="100% (1/1)" />
+            <line number="10" hits="1" branch="false" />
+            <line number="13" hits="864" branch="false" />
+            <line number="15" hits="779" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Domain.ValueObjects.DeliveryEvidence" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Domain\ValueObjects\DeliveryEvidence.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="(System.DateTimeOffset,System.String,System.String)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="12" hits="4" branch="false" />
+                <line number="16" hits="4" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="12" hits="4" branch="false" />
+            <line number="16" hits="4" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Domain.ValueObjects.PlanDuration" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Domain\ValueObjects\PlanDuration.cs" line-rate="1" branch-rate="1" complexity="5">
+          <methods>
+            <method name=".ctor" signature="(System.Int32)" line-rate="1" branch-rate="1" complexity="5">
+              <lines>
+                <line number="8" hits="50" branch="false" />
+                <line number="9" hits="50" branch="true" condition-coverage="100% (5/5)" />
+                <line number="10" hits="3" branch="false" />
+                <line number="13" hits="47" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="8" hits="50" branch="false" />
+            <line number="9" hits="50" branch="true" condition-coverage="100% (5/5)" />
+            <line number="10" hits="3" branch="false" />
+            <line number="13" hits="47" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Domain.ValueObjects.PlanReference" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Domain\ValueObjects\PlanReference.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="(System.Guid)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="8" hits="50" branch="false" />
+                <line number="9" hits="50" branch="true" condition-coverage="100% (1/1)" />
+                <line number="10" hits="1" branch="false" />
+                <line number="13" hits="49" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="8" hits="50" branch="false" />
+            <line number="9" hits="50" branch="true" condition-coverage="100% (1/1)" />
+            <line number="10" hits="1" branch="false" />
+            <line number="13" hits="49" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Domain.ValueObjects.PortionQuantity" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Domain\ValueObjects\PortionQuantity.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="(System.Int32)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="8" hits="26" branch="false" />
+                <line number="9" hits="26" branch="true" condition-coverage="100% (1/1)" />
+                <line number="10" hits="2" branch="false" />
+                <line number="13" hits="24" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="8" hits="26" branch="false" />
+            <line number="9" hits="26" branch="true" condition-coverage="100% (1/1)" />
+            <line number="10" hits="2" branch="false" />
+            <line number="13" hits="24" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Domain.ValueObjects.RecipeReference" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Domain\ValueObjects\RecipeReference.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="(System.String)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="8" hits="26" branch="false" />
+                <line number="9" hits="26" branch="true" condition-coverage="100% (1/1)" />
+                <line number="10" hits="3" branch="false" />
+                <line number="13" hits="23" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="8" hits="26" branch="false" />
+            <line number="9" hits="26" branch="true" condition-coverage="100% (1/1)" />
+            <line number="10" hits="3" branch="false" />
+            <line number="13" hits="23" branch="false" />
+          </lines>
+        </class>
+      </classes>
+    </package>
+    <package name="delivery_schedule_management.Infrastructure" line-rate="0.9602649006622517" branch-rate="0.9166666666666666" complexity="52">
+      <classes>
+        <class name="delivery_schedule_management.Infrastructure.Catalog.HttpCatalogPort" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Infrastructure\Catalog\HttpCatalogPort.cs" line-rate="1" branch-rate="1" complexity="4">
+          <methods>
+            <method name="GetDayResolutionAsync" signature="()" line-rate="1" branch-rate="1" complexity="4">
+              <lines>
+                <line number="15" hits="4" branch="false" />
+                <line number="16" hits="4" branch="false" />
+                <line number="18" hits="4" branch="true" condition-coverage="100% (2/2)" />
+                <line number="19" hits="1" branch="false" />
+                <line number="20" hits="1" branch="false" />
+                <line number="23" hits="3" branch="false" />
+                <line number="25" hits="2" branch="true" condition-coverage="100% (2/2)" />
+                <line number="26" hits="2" branch="false" />
+                <line number="28" hits="1" branch="false" />
+                <line number="29" hits="1" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="15" hits="4" branch="false" />
+            <line number="16" hits="4" branch="false" />
+            <line number="18" hits="4" branch="true" condition-coverage="100% (2/2)" />
+            <line number="19" hits="1" branch="false" />
+            <line number="20" hits="1" branch="false" />
+            <line number="23" hits="3" branch="false" />
+            <line number="25" hits="2" branch="true" condition-coverage="100% (2/2)" />
+            <line number="26" hits="2" branch="false" />
+            <line number="28" hits="1" branch="false" />
+            <line number="29" hits="1" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Infrastructure.Catalog.MockCatalogPort" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Infrastructure\Catalog\MockCatalogPort.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name="GetDayResolutionAsync" signature="(System.Guid,System.DateOnly,System.Threading.CancellationToken)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="13" hits="4" branch="false" />
+                <line number="14" hits="4" branch="false" />
+                <line number="15" hits="4" branch="false" />
+                <line number="17" hits="4" branch="false" />
+                <line number="18" hits="4" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="13" hits="4" branch="false" />
+            <line number="14" hits="4" branch="false" />
+            <line number="15" hits="4" branch="false" />
+            <line number="17" hits="4" branch="false" />
+            <line number="18" hits="4" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Infrastructure.Common.SystemClock" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Infrastructure\Common\SystemClock.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name="get_Now" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="7" hits="1" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="7" hits="1" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Infrastructure.Data.ApplicationDbContext" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Infrastructure\Data\ApplicationDbContext.cs" line-rate="1" branch-rate="1" complexity="4">
+          <methods>
+            <method name="get_Calendars" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="12" hits="24" branch="false" />
+              </lines>
+            </method>
+            <method name="get_ProductionOrders" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="14" hits="9" branch="false" />
+              </lines>
+            </method>
+            <method name="OnModelCreating" signature="(Microsoft.EntityFrameworkCore.ModelBuilder)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="17" hits="1" branch="false" />
+                <line number="18" hits="1" branch="false" />
+                <line number="19" hits="1" branch="false" />
+                <line number="20" hits="1" branch="false" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="(Microsoft.EntityFrameworkCore.DbContextOptions`1&lt;delivery_schedule_management.Infrastructure.Data.ApplicationDbContext&gt;)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="10" hits="45" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="10" hits="45" branch="false" />
+            <line number="12" hits="24" branch="false" />
+            <line number="14" hits="9" branch="false" />
+            <line number="17" hits="1" branch="false" />
+            <line number="18" hits="1" branch="false" />
+            <line number="19" hits="1" branch="false" />
+            <line number="20" hits="1" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Infrastructure.Data.ApplicationDbContextInitialiser" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Infrastructure\Data\ApplicationDbContextInitialiser.cs" line-rate="0.9722222222222222" branch-rate="1" complexity="5">
+          <methods>
+            <method name=".ctor" signature="(Microsoft.Extensions.Logging.ILogger`1&lt;delivery_schedule_management.Infrastructure.Data.ApplicationDbContextInitialiser&gt;,delivery_schedule_management.Infrastructure.Data.ApplicationDbContext,System.TimeProvider)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="32" hits="5" branch="false" />
+                <line number="33" hits="5" branch="false" />
+                <line number="34" hits="5" branch="false" />
+                <line number="35" hits="5" branch="false" />
+                <line number="36" hits="5" branch="false" />
+              </lines>
+            </method>
+            <method name="InitialiseAsync" signature="()" line-rate="0.7777777777777778" branch-rate="1" complexity="1">
+              <lines>
+                <line number="39" hits="1" branch="false" />
+                <line number="41" hits="1" branch="false" />
+                <line number="43" hits="1" branch="false" />
+                <line number="44" hits="0" branch="false" />
+                <line number="45" hits="1" branch="false" />
+                <line number="46" hits="1" branch="false" />
+                <line number="47" hits="1" branch="false" />
+                <line number="48" hits="1" branch="false" />
+                <line number="50" hits="0" branch="false" />
+              </lines>
+            </method>
+            <method name="SeedAsync" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="53" hits="5" branch="false" />
+                <line number="55" hits="5" branch="false" />
+                <line number="56" hits="5" branch="false" />
+                <line number="57" hits="4" branch="false" />
+                <line number="58" hits="1" branch="false" />
+                <line number="59" hits="1" branch="false" />
+                <line number="60" hits="1" branch="false" />
+                <line number="61" hits="1" branch="false" />
+                <line number="63" hits="4" branch="false" />
+              </lines>
+            </method>
+            <method name="TrySeedAsync" signature="()" line-rate="1" branch-rate="1" complexity="2">
+              <lines>
+                <line number="66" hits="5" branch="false" />
+                <line number="67" hits="5" branch="true" condition-coverage="100% (2/2)" />
+                <line number="68" hits="1" branch="false" />
+                <line number="69" hits="1" branch="false" />
+                <line number="72" hits="3" branch="false" />
+                <line number="73" hits="3" branch="false" />
+                <line number="77" hits="3" branch="false" />
+                <line number="78" hits="3" branch="false" />
+                <line number="79" hits="3" branch="false" />
+                <line number="80" hits="3" branch="false" />
+                <line number="81" hits="3" branch="false" />
+                <line number="82" hits="3" branch="false" />
+                <line number="87" hits="3" branch="false" />
+                <line number="88" hits="3" branch="false" />
+                <line number="89" hits="3" branch="false" />
+                <line number="90" hits="3" branch="false" />
+                <line number="91" hits="3" branch="false" />
+                <line number="92" hits="3" branch="false" />
+                <line number="94" hits="3" branch="false" />
+                <line number="95" hits="3" branch="false" />
+                <line number="96" hits="3" branch="false" />
+                <line number="98" hits="3" branch="false" />
+                <line number="99" hits="3" branch="false" />
+                <line number="103" hits="3" branch="false" />
+                <line number="104" hits="3" branch="false" />
+                <line number="105" hits="3" branch="false" />
+                <line number="106" hits="3" branch="false" />
+                <line number="107" hits="3" branch="false" />
+                <line number="108" hits="3" branch="false" />
+                <line number="110" hits="3" branch="false" />
+                <line number="111" hits="3" branch="false" />
+                <line number="112" hits="3" branch="false" />
+                <line number="113" hits="3" branch="false" />
+                <line number="114" hits="3" branch="false" />
+                <line number="115" hits="3" branch="false" />
+                <line number="116" hits="3" branch="false" />
+                <line number="118" hits="3" branch="false" />
+                <line number="119" hits="3" branch="false" />
+                <line number="120" hits="3" branch="false" />
+                <line number="121" hits="3" branch="false" />
+                <line number="125" hits="3" branch="false" />
+                <line number="126" hits="3" branch="false" />
+                <line number="127" hits="3" branch="false" />
+                <line number="129" hits="3" branch="false" />
+                <line number="133" hits="3" branch="false" />
+                <line number="135" hits="3" branch="false" />
+                <line number="136" hits="3" branch="false" />
+                <line number="138" hits="3" branch="false" />
+                <line number="139" hits="4" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="32" hits="5" branch="false" />
+            <line number="33" hits="5" branch="false" />
+            <line number="34" hits="5" branch="false" />
+            <line number="35" hits="5" branch="false" />
+            <line number="36" hits="5" branch="false" />
+            <line number="39" hits="1" branch="false" />
+            <line number="41" hits="1" branch="false" />
+            <line number="43" hits="1" branch="false" />
+            <line number="44" hits="0" branch="false" />
+            <line number="45" hits="1" branch="false" />
+            <line number="46" hits="1" branch="false" />
+            <line number="47" hits="1" branch="false" />
+            <line number="48" hits="1" branch="false" />
+            <line number="50" hits="0" branch="false" />
+            <line number="53" hits="5" branch="false" />
+            <line number="55" hits="5" branch="false" />
+            <line number="56" hits="5" branch="false" />
+            <line number="57" hits="4" branch="false" />
+            <line number="58" hits="1" branch="false" />
+            <line number="59" hits="1" branch="false" />
+            <line number="60" hits="1" branch="false" />
+            <line number="61" hits="1" branch="false" />
+            <line number="63" hits="4" branch="false" />
+            <line number="66" hits="5" branch="false" />
+            <line number="67" hits="5" branch="true" condition-coverage="100% (2/2)" />
+            <line number="68" hits="1" branch="false" />
+            <line number="69" hits="1" branch="false" />
+            <line number="72" hits="3" branch="false" />
+            <line number="73" hits="3" branch="false" />
+            <line number="77" hits="3" branch="false" />
+            <line number="78" hits="3" branch="false" />
+            <line number="79" hits="3" branch="false" />
+            <line number="80" hits="3" branch="false" />
+            <line number="81" hits="3" branch="false" />
+            <line number="82" hits="3" branch="false" />
+            <line number="87" hits="3" branch="false" />
+            <line number="88" hits="3" branch="false" />
+            <line number="89" hits="3" branch="false" />
+            <line number="90" hits="3" branch="false" />
+            <line number="91" hits="3" branch="false" />
+            <line number="92" hits="3" branch="false" />
+            <line number="94" hits="3" branch="false" />
+            <line number="95" hits="3" branch="false" />
+            <line number="96" hits="3" branch="false" />
+            <line number="98" hits="3" branch="false" />
+            <line number="99" hits="3" branch="false" />
+            <line number="103" hits="3" branch="false" />
+            <line number="104" hits="3" branch="false" />
+            <line number="105" hits="3" branch="false" />
+            <line number="106" hits="3" branch="false" />
+            <line number="107" hits="3" branch="false" />
+            <line number="108" hits="3" branch="false" />
+            <line number="110" hits="3" branch="false" />
+            <line number="111" hits="3" branch="false" />
+            <line number="112" hits="3" branch="false" />
+            <line number="113" hits="3" branch="false" />
+            <line number="114" hits="3" branch="false" />
+            <line number="115" hits="3" branch="false" />
+            <line number="116" hits="3" branch="false" />
+            <line number="118" hits="3" branch="false" />
+            <line number="119" hits="3" branch="false" />
+            <line number="120" hits="3" branch="false" />
+            <line number="121" hits="3" branch="false" />
+            <line number="125" hits="3" branch="false" />
+            <line number="126" hits="3" branch="false" />
+            <line number="127" hits="3" branch="false" />
+            <line number="129" hits="3" branch="false" />
+            <line number="133" hits="3" branch="false" />
+            <line number="135" hits="3" branch="false" />
+            <line number="136" hits="3" branch="false" />
+            <line number="138" hits="3" branch="false" />
+            <line number="139" hits="4" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Infrastructure.Data.Configurations.DeliveryCalendarConfiguration" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Infrastructure\Data\Configurations\DeliveryCalendarConfiguration.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name="Configure" signature="(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder`1&lt;delivery_schedule_management.Domain.Entities.DeliveryCalendar&gt;)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="10" hits="1" branch="false" />
+                <line number="11" hits="1" branch="false" />
+                <line number="13" hits="1" branch="false" />
+                <line number="15" hits="1" branch="false" />
+                <line number="16" hits="1" branch="false" />
+                <line number="17" hits="1" branch="false" />
+                <line number="18" hits="1" branch="false" />
+                <line number="19" hits="1" branch="false" />
+                <line number="21" hits="1" branch="false" />
+                <line number="22" hits="1" branch="false" />
+                <line number="23" hits="1" branch="false" />
+                <line number="24" hits="1" branch="false" />
+                <line number="26" hits="1" branch="false" />
+                <line number="27" hits="1" branch="false" />
+                <line number="28" hits="1" branch="false" />
+                <line number="29" hits="1" branch="false" />
+                <line number="31" hits="1" branch="false" />
+                <line number="32" hits="1" branch="false" />
+                <line number="33" hits="1" branch="false" />
+                <line number="34" hits="1" branch="false" />
+                <line number="36" hits="1" branch="false" />
+                <line number="38" hits="1" branch="false" />
+                <line number="39" hits="1" branch="false" />
+                <line number="40" hits="1" branch="false" />
+                <line number="41" hits="1" branch="false" />
+                <line number="42" hits="1" branch="false" />
+                <line number="43" hits="1" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="10" hits="1" branch="false" />
+            <line number="11" hits="1" branch="false" />
+            <line number="13" hits="1" branch="false" />
+            <line number="15" hits="1" branch="false" />
+            <line number="16" hits="1" branch="false" />
+            <line number="17" hits="1" branch="false" />
+            <line number="18" hits="1" branch="false" />
+            <line number="19" hits="1" branch="false" />
+            <line number="21" hits="1" branch="false" />
+            <line number="22" hits="1" branch="false" />
+            <line number="23" hits="1" branch="false" />
+            <line number="24" hits="1" branch="false" />
+            <line number="26" hits="1" branch="false" />
+            <line number="27" hits="1" branch="false" />
+            <line number="28" hits="1" branch="false" />
+            <line number="29" hits="1" branch="false" />
+            <line number="31" hits="1" branch="false" />
+            <line number="32" hits="1" branch="false" />
+            <line number="33" hits="1" branch="false" />
+            <line number="34" hits="1" branch="false" />
+            <line number="36" hits="1" branch="false" />
+            <line number="38" hits="1" branch="false" />
+            <line number="39" hits="1" branch="false" />
+            <line number="40" hits="1" branch="false" />
+            <line number="41" hits="1" branch="false" />
+            <line number="42" hits="1" branch="false" />
+            <line number="43" hits="1" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Infrastructure.Data.Configurations.DeliveryDayConfiguration" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Infrastructure\Data\Configurations\DeliveryDayConfiguration.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name="Configure" signature="(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder`1&lt;delivery_schedule_management.Domain.Entities.DeliveryDay&gt;)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="10" hits="1" branch="false" />
+                <line number="11" hits="1" branch="false" />
+                <line number="13" hits="1" branch="false" />
+                <line number="14" hits="1" branch="false" />
+                <line number="15" hits="1" branch="false" />
+                <line number="16" hits="1" branch="false" />
+                <line number="18" hits="1" branch="false" />
+                <line number="20" hits="1" branch="false" />
+                <line number="22" hits="1" branch="false" />
+                <line number="23" hits="1" branch="false" />
+                <line number="24" hits="1" branch="false" />
+                <line number="25" hits="1" branch="false" />
+                <line number="26" hits="1" branch="false" />
+                <line number="27" hits="1" branch="false" />
+                <line number="28" hits="1" branch="false" />
+                <line number="29" hits="1" branch="false" />
+                <line number="30" hits="1" branch="false" />
+                <line number="31" hits="1" branch="false" />
+                <line number="32" hits="1" branch="false" />
+                <line number="33" hits="1" branch="false" />
+                <line number="34" hits="1" branch="false" />
+                <line number="36" hits="1" branch="false" />
+                <line number="37" hits="1" branch="false" />
+                <line number="38" hits="1" branch="false" />
+                <line number="39" hits="1" branch="false" />
+                <line number="41" hits="1" branch="false" />
+                <line number="42" hits="1" branch="false" />
+                <line number="43" hits="1" branch="false" />
+                <line number="44" hits="1" branch="false" />
+                <line number="46" hits="1" branch="false" />
+                <line number="47" hits="1" branch="false" />
+                <line number="48" hits="1" branch="false" />
+                <line number="49" hits="1" branch="false" />
+                <line number="50" hits="1" branch="false" />
+                <line number="51" hits="1" branch="false" />
+                <line number="52" hits="1" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="10" hits="1" branch="false" />
+            <line number="11" hits="1" branch="false" />
+            <line number="13" hits="1" branch="false" />
+            <line number="14" hits="1" branch="false" />
+            <line number="15" hits="1" branch="false" />
+            <line number="16" hits="1" branch="false" />
+            <line number="18" hits="1" branch="false" />
+            <line number="20" hits="1" branch="false" />
+            <line number="22" hits="1" branch="false" />
+            <line number="23" hits="1" branch="false" />
+            <line number="24" hits="1" branch="false" />
+            <line number="25" hits="1" branch="false" />
+            <line number="26" hits="1" branch="false" />
+            <line number="27" hits="1" branch="false" />
+            <line number="28" hits="1" branch="false" />
+            <line number="29" hits="1" branch="false" />
+            <line number="30" hits="1" branch="false" />
+            <line number="31" hits="1" branch="false" />
+            <line number="32" hits="1" branch="false" />
+            <line number="33" hits="1" branch="false" />
+            <line number="34" hits="1" branch="false" />
+            <line number="36" hits="1" branch="false" />
+            <line number="37" hits="1" branch="false" />
+            <line number="38" hits="1" branch="false" />
+            <line number="39" hits="1" branch="false" />
+            <line number="41" hits="1" branch="false" />
+            <line number="42" hits="1" branch="false" />
+            <line number="43" hits="1" branch="false" />
+            <line number="44" hits="1" branch="false" />
+            <line number="46" hits="1" branch="false" />
+            <line number="47" hits="1" branch="false" />
+            <line number="48" hits="1" branch="false" />
+            <line number="49" hits="1" branch="false" />
+            <line number="50" hits="1" branch="false" />
+            <line number="51" hits="1" branch="false" />
+            <line number="52" hits="1" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Infrastructure.Data.Configurations.ProductionOrderConfiguration" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Infrastructure\Data\Configurations\ProductionOrderConfiguration.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name="Configure" signature="(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder`1&lt;delivery_schedule_management.Domain.Entities.ProductionOrder&gt;)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="10" hits="1" branch="false" />
+                <line number="11" hits="1" branch="false" />
+                <line number="13" hits="1" branch="false" />
+                <line number="14" hits="1" branch="false" />
+                <line number="15" hits="1" branch="false" />
+                <line number="16" hits="1" branch="false" />
+                <line number="18" hits="1" branch="false" />
+                <line number="19" hits="1" branch="false" />
+                <line number="20" hits="1" branch="false" />
+                <line number="21" hits="1" branch="false" />
+                <line number="22" hits="1" branch="false" />
+                <line number="24" hits="1" branch="false" />
+                <line number="26" hits="1" branch="false" />
+                <line number="28" hits="1" branch="false" />
+                <line number="29" hits="1" branch="false" />
+                <line number="30" hits="1" branch="false" />
+                <line number="31" hits="1" branch="false" />
+                <line number="32" hits="1" branch="false" />
+                <line number="33" hits="1" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="10" hits="1" branch="false" />
+            <line number="11" hits="1" branch="false" />
+            <line number="13" hits="1" branch="false" />
+            <line number="14" hits="1" branch="false" />
+            <line number="15" hits="1" branch="false" />
+            <line number="16" hits="1" branch="false" />
+            <line number="18" hits="1" branch="false" />
+            <line number="19" hits="1" branch="false" />
+            <line number="20" hits="1" branch="false" />
+            <line number="21" hits="1" branch="false" />
+            <line number="22" hits="1" branch="false" />
+            <line number="24" hits="1" branch="false" />
+            <line number="26" hits="1" branch="false" />
+            <line number="28" hits="1" branch="false" />
+            <line number="29" hits="1" branch="false" />
+            <line number="30" hits="1" branch="false" />
+            <line number="31" hits="1" branch="false" />
+            <line number="32" hits="1" branch="false" />
+            <line number="33" hits="1" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Infrastructure.Data.Configurations.ProductionOrderLineConfiguration" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Infrastructure\Data\Configurations\ProductionOrderLineConfiguration.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name="Configure" signature="(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder`1&lt;delivery_schedule_management.Domain.Entities.ProductionOrderLine&gt;)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="10" hits="1" branch="false" />
+                <line number="11" hits="1" branch="false" />
+                <line number="13" hits="1" branch="false" />
+                <line number="14" hits="1" branch="false" />
+                <line number="15" hits="1" branch="false" />
+                <line number="17" hits="1" branch="false" />
+                <line number="18" hits="1" branch="false" />
+                <line number="19" hits="1" branch="false" />
+                <line number="20" hits="1" branch="false" />
+                <line number="21" hits="1" branch="false" />
+                <line number="22" hits="1" branch="false" />
+                <line number="23" hits="1" branch="false" />
+                <line number="24" hits="1" branch="false" />
+                <line number="25" hits="1" branch="false" />
+                <line number="26" hits="1" branch="false" />
+                <line number="27" hits="1" branch="false" />
+                <line number="28" hits="1" branch="false" />
+                <line number="29" hits="1" branch="false" />
+                <line number="31" hits="1" branch="false" />
+                <line number="32" hits="1" branch="false" />
+                <line number="33" hits="1" branch="false" />
+                <line number="34" hits="1" branch="false" />
+                <line number="35" hits="1" branch="false" />
+                <line number="37" hits="1" branch="false" />
+                <line number="38" hits="1" branch="false" />
+                <line number="39" hits="1" branch="false" />
+                <line number="40" hits="1" branch="false" />
+                <line number="41" hits="1" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="10" hits="1" branch="false" />
+            <line number="11" hits="1" branch="false" />
+            <line number="13" hits="1" branch="false" />
+            <line number="14" hits="1" branch="false" />
+            <line number="15" hits="1" branch="false" />
+            <line number="17" hits="1" branch="false" />
+            <line number="18" hits="1" branch="false" />
+            <line number="19" hits="1" branch="false" />
+            <line number="20" hits="1" branch="false" />
+            <line number="21" hits="1" branch="false" />
+            <line number="22" hits="1" branch="false" />
+            <line number="23" hits="1" branch="false" />
+            <line number="24" hits="1" branch="false" />
+            <line number="25" hits="1" branch="false" />
+            <line number="26" hits="1" branch="false" />
+            <line number="27" hits="1" branch="false" />
+            <line number="28" hits="1" branch="false" />
+            <line number="29" hits="1" branch="false" />
+            <line number="31" hits="1" branch="false" />
+            <line number="32" hits="1" branch="false" />
+            <line number="33" hits="1" branch="false" />
+            <line number="34" hits="1" branch="false" />
+            <line number="35" hits="1" branch="false" />
+            <line number="37" hits="1" branch="false" />
+            <line number="38" hits="1" branch="false" />
+            <line number="39" hits="1" branch="false" />
+            <line number="40" hits="1" branch="false" />
+            <line number="41" hits="1" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Infrastructure.Data.InitialiserExtensions" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Infrastructure\Data\ApplicationDbContextInitialiser.cs" line-rate="0" branch-rate="1" complexity="1">
+          <methods>
+            <method name="InitialiseDatabaseAsync" signature="()" line-rate="0" branch-rate="1" complexity="1">
+              <lines>
+                <line number="15" hits="0" branch="false" />
+                <line number="16" hits="0" branch="false" />
+                <line number="18" hits="0" branch="false" />
+                <line number="20" hits="0" branch="false" />
+                <line number="21" hits="0" branch="false" />
+                <line number="22" hits="0" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="15" hits="0" branch="false" />
+            <line number="16" hits="0" branch="false" />
+            <line number="18" hits="0" branch="false" />
+            <line number="20" hits="0" branch="false" />
+            <line number="21" hits="0" branch="false" />
+            <line number="22" hits="0" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Infrastructure.Data.Interceptors.AuditableEntityInterceptor" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Infrastructure\Data\Interceptors\AuditableEntityInterceptor.cs" line-rate="1" branch-rate="0.8333333333333334" complexity="15">
+          <methods>
+            <method name="SavingChanges" signature="(Microsoft.EntityFrameworkCore.Diagnostics.DbContextEventData,Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult`1&lt;System.Int32&gt;)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="18" hits="1" branch="false" />
+                <line number="19" hits="1" branch="false" />
+                <line number="21" hits="1" branch="false" />
+                <line number="22" hits="1" branch="false" />
+              </lines>
+            </method>
+            <method name="SavingChangesAsync" signature="(Microsoft.EntityFrameworkCore.Diagnostics.DbContextEventData,Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult`1&lt;System.Int32&gt;,System.Threading.CancellationToken)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="25" hits="3" branch="false" />
+                <line number="26" hits="3" branch="false" />
+                <line number="28" hits="3" branch="false" />
+                <line number="29" hits="3" branch="false" />
+              </lines>
+            </method>
+            <method name="UpdateEntities" signature="(Microsoft.EntityFrameworkCore.DbContext)" line-rate="1" branch-rate="0.8333333333333334" complexity="12">
+              <lines>
+                <line number="32" hits="5" branch="false" />
+                <line number="33" hits="6" branch="true" condition-coverage="100% (2/2)" />
+                <line number="35" hits="20" branch="true" condition-coverage="100% (2/2)" />
+                <line number="36" hits="4" branch="false" />
+                <line number="37" hits="4" branch="true" condition-coverage="67% (4/6)" />
+                <line number="38" hits="4" branch="false" />
+                <line number="39" hits="4" branch="false" />
+                <line number="40" hits="4" branch="true" condition-coverage="100% (2/2)" />
+                <line number="41" hits="3" branch="false" />
+                <line number="42" hits="3" branch="false" />
+                <line number="43" hits="3" branch="false" />
+                <line number="44" hits="4" branch="false" />
+                <line number="45" hits="4" branch="false" />
+                <line number="46" hits="4" branch="false" />
+                <line number="47" hits="5" branch="false" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="(System.TimeProvider)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="12" hits="4" branch="false" />
+                <line number="13" hits="4" branch="false" />
+                <line number="14" hits="4" branch="false" />
+                <line number="15" hits="4" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="12" hits="4" branch="false" />
+            <line number="13" hits="4" branch="false" />
+            <line number="14" hits="4" branch="false" />
+            <line number="15" hits="4" branch="false" />
+            <line number="18" hits="1" branch="false" />
+            <line number="19" hits="1" branch="false" />
+            <line number="21" hits="1" branch="false" />
+            <line number="22" hits="1" branch="false" />
+            <line number="25" hits="3" branch="false" />
+            <line number="26" hits="3" branch="false" />
+            <line number="28" hits="3" branch="false" />
+            <line number="29" hits="3" branch="false" />
+            <line number="32" hits="5" branch="false" />
+            <line number="33" hits="6" branch="true" condition-coverage="100% (2/2)" />
+            <line number="35" hits="20" branch="true" condition-coverage="100% (2/2)" />
+            <line number="36" hits="4" branch="false" />
+            <line number="37" hits="4" branch="true" condition-coverage="67% (4/6)" />
+            <line number="38" hits="4" branch="false" />
+            <line number="39" hits="4" branch="false" />
+            <line number="40" hits="4" branch="true" condition-coverage="100% (2/2)" />
+            <line number="41" hits="3" branch="false" />
+            <line number="42" hits="3" branch="false" />
+            <line number="43" hits="3" branch="false" />
+            <line number="44" hits="4" branch="false" />
+            <line number="45" hits="4" branch="false" />
+            <line number="46" hits="4" branch="false" />
+            <line number="47" hits="5" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Infrastructure.Data.Interceptors.DispatchDomainEventsInterceptor" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Infrastructure\Data\Interceptors\DispatchDomainEventsInterceptor.cs" line-rate="1" branch-rate="1" complexity="7">
+          <methods>
+            <method name="SavingChanges" signature="(Microsoft.EntityFrameworkCore.Diagnostics.DbContextEventData,Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult`1&lt;System.Int32&gt;)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="18" hits="1" branch="false" />
+                <line number="19" hits="1" branch="false" />
+                <line number="21" hits="1" branch="false" />
+                <line number="23" hits="1" branch="false" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="(MediatR.IMediator)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="12" hits="3" branch="false" />
+                <line number="13" hits="3" branch="false" />
+                <line number="14" hits="3" branch="false" />
+                <line number="15" hits="3" branch="false" />
+              </lines>
+            </method>
+            <method name="DispatchDomainEvents" signature="()" line-rate="1" branch-rate="1" complexity="4">
+              <lines>
+                <line number="33" hits="3" branch="false" />
+                <line number="34" hits="4" branch="true" condition-coverage="100% (2/2)" />
+                <line number="36" hits="2" branch="false" />
+                <line number="37" hits="2" branch="false" />
+                <line number="38" hits="2" branch="false" />
+                <line number="39" hits="2" branch="false" />
+                <line number="41" hits="2" branch="false" />
+                <line number="42" hits="2" branch="false" />
+                <line number="43" hits="2" branch="false" />
+                <line number="45" hits="2" branch="false" />
+                <line number="47" hits="10" branch="true" condition-coverage="100% (2/2)" />
+                <line number="48" hits="2" branch="false" />
+                <line number="49" hits="3" branch="false" />
+              </lines>
+            </method>
+            <method name="SavingChangesAsync" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="26" hits="1" branch="false" />
+                <line number="27" hits="1" branch="false" />
+                <line number="29" hits="1" branch="false" />
+                <line number="30" hits="1" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="12" hits="3" branch="false" />
+            <line number="13" hits="3" branch="false" />
+            <line number="14" hits="3" branch="false" />
+            <line number="15" hits="3" branch="false" />
+            <line number="18" hits="1" branch="false" />
+            <line number="19" hits="1" branch="false" />
+            <line number="21" hits="1" branch="false" />
+            <line number="23" hits="1" branch="false" />
+            <line number="26" hits="1" branch="false" />
+            <line number="27" hits="1" branch="false" />
+            <line number="29" hits="1" branch="false" />
+            <line number="30" hits="1" branch="false" />
+            <line number="33" hits="3" branch="false" />
+            <line number="34" hits="4" branch="true" condition-coverage="100% (2/2)" />
+            <line number="36" hits="2" branch="false" />
+            <line number="37" hits="2" branch="false" />
+            <line number="38" hits="2" branch="false" />
+            <line number="39" hits="2" branch="false" />
+            <line number="41" hits="2" branch="false" />
+            <line number="42" hits="2" branch="false" />
+            <line number="43" hits="2" branch="false" />
+            <line number="45" hits="2" branch="false" />
+            <line number="47" hits="10" branch="true" condition-coverage="100% (2/2)" />
+            <line number="48" hits="2" branch="false" />
+            <line number="49" hits="3" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Infrastructure.Data.Interceptors.Extensions" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Infrastructure\Data\Interceptors\AuditableEntityInterceptor.cs" line-rate="0" branch-rate="1" complexity="1">
+          <methods>
+            <method name="HasChangedOwnedEntities" signature="(Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry)" line-rate="0" branch-rate="1" complexity="1">
+              <lines>
+                <line number="53" hits="0" branch="false" />
+                <line number="54" hits="0" branch="false" />
+                <line number="55" hits="0" branch="false" />
+                <line number="56" hits="0" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="53" hits="0" branch="false" />
+            <line number="54" hits="0" branch="false" />
+            <line number="55" hits="0" branch="false" />
+            <line number="56" hits="0" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Infrastructure.Data.Repositories.CalendarRepository" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Infrastructure\Data\Repositories\CalendarRepository.cs" line-rate="1" branch-rate="1" complexity="5">
+          <methods>
+            <method name="GetByIdAsync" signature="(System.Int32,System.Threading.CancellationToken)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="10" hits="2" branch="false" />
+              </lines>
+            </method>
+            <method name="GetByContractIdAsync" signature="(System.Guid,System.Threading.CancellationToken)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="13" hits="2" branch="false" />
+              </lines>
+            </method>
+            <method name="GetByDeliveryDayIdAsync" signature="(System.Int32,System.Threading.CancellationToken)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="16" hits="2" branch="false" />
+              </lines>
+            </method>
+            <method name="GetActiveForDeliveryDateAsync" signature="(System.DateOnly,System.Threading.CancellationToken)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="19" hits="2" branch="false" />
+              </lines>
+            </method>
+            <method name="Add" signature="(delivery_schedule_management.Domain.Entities.DeliveryCalendar)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="21" hits="5" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="10" hits="2" branch="false" />
+            <line number="13" hits="2" branch="false" />
+            <line number="16" hits="2" branch="false" />
+            <line number="19" hits="2" branch="false" />
+            <line number="21" hits="5" branch="false" />
+          </lines>
+        </class>
+        <class name="delivery_schedule_management.Infrastructure.Data.Repositories.ProductionOrderRepository" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Infrastructure\Data\Repositories\ProductionOrderRepository.cs" line-rate="1" branch-rate="1" complexity="2">
+          <methods>
+            <method name="GetByDeliveryDateAsync" signature="(System.DateOnly,System.Threading.CancellationToken)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="10" hits="3" branch="false" />
+              </lines>
+            </method>
+            <method name="Add" signature="(delivery_schedule_management.Domain.Entities.ProductionOrder)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="12" hits="2" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="10" hits="3" branch="false" />
+            <line number="12" hits="2" branch="false" />
+          </lines>
+        </class>
+        <class name="Microsoft.Extensions.DependencyInjection.DependencyInjection" filename="D:\Visual Studio 2022 Projects\delivery-schedule-management\src\Infrastructure\DependencyInjection.cs" line-rate="1" branch-rate="1" complexity="2">
+          <methods>
+            <method name="AddInfrastructureServices" signature="(Microsoft.Extensions.Hosting.IHostApplicationBuilder)" line-rate="1" branch-rate="1" complexity="2">
+              <lines>
+                <line number="17" hits="4" branch="false" />
+                <line number="18" hits="4" branch="false" />
+                <line number="19" hits="4" branch="false" />
+                <line number="21" hits="3" branch="false" />
+                <line number="22" hits="3" branch="false" />
+                <line number="24" hits="3" branch="false" />
+                <line number="25" hits="3" branch="false" />
+                <line number="26" hits="3" branch="false" />
+                <line number="27" hits="3" branch="false" />
+                <line number="28" hits="3" branch="false" />
+                <line number="29" hits="3" branch="false" />
+                <line number="31" hits="3" branch="false" />
+                <line number="33" hits="3" branch="false" />
+                <line number="35" hits="3" branch="false" />
+                <line number="37" hits="3" branch="false" />
+                <line number="39" hits="3" branch="false" />
+                <line number="40" hits="3" branch="false" />
+                <line number="41" hits="3" branch="false" />
+                <line number="44" hits="3" branch="true" condition-coverage="100% (2/2)" />
+                <line number="45" hits="1" branch="false" />
+                <line number="46" hits="1" branch="false" />
+                <line number="47" hits="1" branch="false" />
+                <line number="49" hits="2" branch="false" />
+                <line number="50" hits="2" branch="false" />
+                <line number="51" hits="2" branch="false" />
+                <line number="53" hits="1" branch="false" />
+                <line number="54" hits="1" branch="false" />
+                <line number="55" hits="2" branch="false" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="17" hits="4" branch="false" />
+            <line number="18" hits="4" branch="false" />
+            <line number="19" hits="4" branch="false" />
+            <line number="21" hits="3" branch="false" />
+            <line number="22" hits="3" branch="false" />
+            <line number="24" hits="3" branch="false" />
+            <line number="25" hits="3" branch="false" />
+            <line number="26" hits="3" branch="false" />
+            <line number="27" hits="3" branch="false" />
+            <line number="28" hits="3" branch="false" />
+            <line number="29" hits="3" branch="false" />
+            <line number="31" hits="3" branch="false" />
+            <line number="33" hits="3" branch="false" />
+            <line number="35" hits="3" branch="false" />
+            <line number="37" hits="3" branch="false" />
+            <line number="39" hits="3" branch="false" />
+            <line number="40" hits="3" branch="false" />
+            <line number="41" hits="3" branch="false" />
+            <line number="44" hits="3" branch="true" condition-coverage="100% (2/2)" />
+            <line number="45" hits="1" branch="false" />
+            <line number="46" hits="1" branch="false" />
+            <line number="47" hits="1" branch="false" />
+            <line number="49" hits="2" branch="false" />
+            <line number="50" hits="2" branch="false" />
+            <line number="51" hits="2" branch="false" />
+            <line number="53" hits="1" branch="false" />
+            <line number="54" hits="1" branch="false" />
+            <line number="55" hits="2" branch="false" />
+          </lines>
+        </class>
+      </classes>
+    </package>
+  </packages>
+</coverage>
