@@ -1,0 +1,20 @@
+#!/bin/sh
+# pre-commit: block commits whose staged C# files break .editorconfig
+# (tabs-not-spaces, formatting). Enable with:
+#   git config core.hooksPath .githooks
+
+files=$(git diff --cached --name-only --diff-filter=ACM -- '*.cs')
+[ -z "$files" ] && exit 0
+
+echo "pre-commit: checking staged C# files with dotnet format..."
+
+# shellcheck disable=SC2086
+if ! dotnet format whitespace delivery-schedule-management.slnx \
+		--verify-no-changes --verbosity quiet \
+		--include $files; then
+	echo ""
+	echo "pre-commit: style violations found (use TABS, not spaces)."
+	echo "Fix with:  dotnet format whitespace delivery-schedule-management.slnx --include <file>"
+	echo "then 'git add' the files and commit again."
+	exit 1
+fi

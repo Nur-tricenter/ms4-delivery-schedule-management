@@ -1,19 +1,40 @@
 root = true
 
-# All files
+# All files: TABS, not spaces
 [*]
+indent_style = tab
+indent_size = 4
+tab_width = 4
+charset = utf-8
+trim_trailing_whitespace = true
+
+# YAML does not allow tabs
+[*.{yml,yaml}]
 indent_style = space
+indent_size = 2
+
+# Markdown: keep spaces, trailing double-space means a line break
+[*.md]
+indent_style = space
+trim_trailing_whitespace = false
+
+# Shell scripts / git hooks must use LF
+[{*.sh,.githooks/*}]
+end_of_line = lf
 
 # Xml files
-[*.{xml,csproj,props,targets,ruleset,nuspec,resx}]
+[*.{xml,csproj,props,targets,ruleset,nuspec,resx,slnx}]
+indent_style = space
 indent_size = 2
 
 # Javascript files
 [*.js]
+indent_style = space
 indent_size = 2
 
 # Json files
 [*.{json,config}]
+indent_style = space
 indent_size = 2
 
 # C# files
@@ -25,8 +46,8 @@ indent_size = 2
 indent_size = 4
 tab_width = 4
 
-# New line preferences
-end_of_line = lf
+# New line preferences (CRLF matches the Windows working tree with core.autocrlf=true)
+end_of_line = crlf
 insert_final_newline = true
 
 #### .NET Coding Conventions ####
